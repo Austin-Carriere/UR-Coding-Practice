@@ -1,0 +1,74 @@
+.first-color {
+  background: #282f44;
+}
+
+.second-color {
+  background: #e6af2e;
+}
+
+.third-color {
+  background: #f5d061;
+}
+
+.fourth-color {
+  background: #ececec;
+}
+
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+.codespace {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 20em;
+  min-width: 5em;
+  width: 20vw;
+  background: #282f44;
+  border-right: 3px #e6af2e solid;
+}
+
+.main {
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  background: #333c4a;
+  background-image: linear-gradient(45deg, #282f44, #333c4a);
+  min-width: 15em;
+  flex: 1;
+}
+
+.header {
+  display: flex;
+  height: 4em;
+  text-align: right;
+  align-items: center;
+  background-image: linear-gradient(to right, #282f44 15%, #494964);
+
+  border-bottom: 3px #e6af2e solid;
+}
+
+.canvas {
+  background: #181a2a;
+  height: 94%;
+  width: 92%;
+  border: 5px #4b5667 solid;
+  border-radius: 20px;
+}
+
+html {
+  background-color: white;
+}
+
+body {
+  margin: 0px;
+}
+
+.header img:hover {
+  transform: translate(0, -2px);
+  transform: scale(1.2);
+  background-image: radial-gradient(#f5d061 10%, #282f4400 68%);
+}

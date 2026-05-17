@@ -1,0 +1,13 @@
+BLACKS
+
+main: #282f44
+  
+secondary: #333c4a
+
+tertiary: #495664
+
+    YELLOWS 
+
+ #e6af2e
+
+ #f5d061
