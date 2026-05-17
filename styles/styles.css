@@ -21,8 +21,8 @@
 
 .codespace {
   display: flex;
-  justify-content: center;
-  align-items: center;
+  justify-content: left;
+  align-items: baseline;
   max-width: 20em;
   min-width: 5em;
   width: 20vw;
@@ -53,10 +53,11 @@
 
 .canvas {
   background: #181a2a;
-  height: 94%;
+  height: 90%;
   width: 92%;
   border: 5px #4b5667 solid;
   border-radius: 20px;
+  margin-bottom: 50px;
 }
 
 html {
@@ -71,4 +72,38 @@ body {
   transform: translate(0, -2px);
   transform: scale(1.2);
   background-image: radial-gradient(#f5d061 10%, #282f4400 68%);
+}
+
+.codesections {
+  height: 70%;
+  width: 100%;
+  max-width: 15em;
+}
+
+.codesectionbutton:hover {
+  background: #66674b;
+}
+
+.codesectionbutton {
+  width: 100%;
+  border: none;
+  height: 15%;
+  text-align: left;
+  background: #4b4c67;
+  color: whitesmoke;
+  font-family: "Passero One", sans-serif;
+  font-size: 25px;
+}
+
+@media screen and (width <= 513px) {
+  .codesectionbutton {
+    width: 100%;
+    border: none;
+    height: 15%;
+    text-align: left;
+    background: #4b4c67;
+    color: whitesmoke;
+    font-family: "Passero One", sans-serif;
+    font-size: 13px;
+  }
 }

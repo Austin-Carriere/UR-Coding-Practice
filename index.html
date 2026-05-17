@@ -5,6 +5,13 @@
     <link rel="stylesheet" href="styles/styles.css" />
     <link rel="icon" href="images/urban-rescue-logo.png" />
     <title>Urban Rescue Code Challenge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Passero+One&display=swap"
+      rel="stylesheet"
+    />
+    <script defer src="scripts/app.js"></script>
   </head>
   <body>
     <header class="header">
@@ -15,7 +22,22 @@
       />
     </header>
     <div class="app">
-      <div class="codespace"><p>code</p></div>
+      <div class="codespace">
+        <div id="codesections" class="codesections">
+          <button id="MovementSectionbutton" class="codesectionbutton">
+            Movement
+          </button>
+          <button id="LogicSectionbutton" class="codesectionbutton">
+            Logic
+          </button>
+          <button id="OperatorsSectionbutton" class="codesectionbutton">
+            Operators
+          </button>
+          <button id="LoopsSectionbutton" class="codesectionbutton">
+            Loops
+          </button>
+        </div>
+      </div>
       <div class="main">
         <div class="canvas">
           <p></p>
