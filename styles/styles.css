@@ -1,17 +1,9 @@
-.first-color {
-  background: #282f44;
-}
-
-.second-color {
-  background: #e6af2e;
-}
-
-.third-color {
-  background: #f5d061;
-}
-
-.fourth-color {
-  background: #ececec;
+:root {
+  --movement-color: #ffe100;
+  --logic-color: #5e0eff;
+  --operators-color: #ff0e0e;
+  --loops-color: #12ff0e;
+  --sensors-color: #ff0eef;
 }
 
 .app {
@@ -21,13 +13,19 @@
 
 .codespace {
   display: flex;
-  justify-content: left;
+  flex-direction: column;
+  justify-content: flex-start;
   align-items: baseline;
   max-width: 20em;
   min-width: 5em;
-  width: 20vw;
+  width: 28vw;
   background: #282f44;
   border-right: 3px #e6af2e solid;
+}
+
+.ToolBox {
+  display: block;
+  width: 100%;
 }
 
 .main {
@@ -75,32 +73,80 @@ body {
 }
 
 .codesections {
-  height: 70%;
   width: 100%;
-  max-width: 15em;
+  display: flex;
+  flex-direction: column;
+}
+
+.codeBank {
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+
+.blockBank {
+  background: #5f709e;
+  border-radius: 0 15px 15px 0;
+  flex: 1;
+  margin: 0 5px 10px 0px;
+  height: 100%;
+  border-top: none;
+  border-left: none;
+  border-radius: 0 12px 12px 12px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.15);
+  overflow: auto;
+}
+
+#blockBankTitle {
+  background: gainsboro;
+  width: 90%;
+  margin: 10px;
+  border-radius: 10px;
+  text-align: center;
+  font-family: "Passero One", sans-serif;
+  color: #e6af2e;
+  font-size: 45px;
+}
+
+.ToolBox {
+  color: #ececec;
+  font-family: "Passero One", sans-serif;
+  text-align: center;
+  font-size: 30px;
+  font-weight: 500;
+  margin-bottom: 0;
+  margin-top: 15px;
+  padding-bottom: 15px;
+  border-bottom: #e6af2e solid 5px;
+}
+
+.codesectionbutton img {
+  display: inline;
+  width: 40px;
 }
 
 .codesectionbutton:hover {
-  background: #66674b;
+  background: #737555;
+  width: 110%;
 }
 
 .codesectionbutton {
   width: 100%;
   border: none;
   height: 15%;
-  text-align: left;
+  text-align: center;
   background: #4b4c67;
   color: whitesmoke;
   font-family: "Passero One", sans-serif;
-  font-size: 25px;
+  font-size: 30px;
 }
 
-@media screen and (width <= 513px) {
+@media screen and (width <= 443px) {
   .codesectionbutton {
     width: 100%;
     border: none;
     height: 15%;
-    text-align: left;
+    text-align: center;
     background: #4b4c67;
     color: whitesmoke;
     font-family: "Passero One", sans-serif;
