@@ -5,12 +5,10 @@
   --loops-color: #12ff0e;
   --sensors-color: #ff0eef;
 }
-
 .app {
   display: flex;
   min-height: 100vh;
 }
-
 .codespace {
   display: flex;
   flex-direction: column;
@@ -22,12 +20,10 @@
   background: #282f44;
   border-right: 3px #e6af2e solid;
 }
-
 .ToolBox {
   display: block;
   width: 100%;
 }
-
 .main {
   display: flex;
   justify-content: center;
@@ -38,17 +34,14 @@
   min-width: 15em;
   flex: 1;
 }
-
 .header {
   display: flex;
   height: 4em;
   text-align: right;
   align-items: center;
   background-image: linear-gradient(to right, #282f44 15%, #494964);
-
   border-bottom: 3px #e6af2e solid;
 }
-
 .canvas {
   background: #181a2a;
   height: 90%;
@@ -57,46 +50,55 @@
   border-radius: 20px;
   margin-bottom: 50px;
 }
-
 html {
   background-color: white;
 }
-
 body {
   margin: 0px;
 }
-
 .header img:hover {
   transform: translate(0, -2px);
   transform: scale(1.2);
   background-image: radial-gradient(#f5d061 10%, #282f4400 68%);
 }
-
 .codesections {
   width: 100%;
   display: flex;
   flex-direction: column;
 }
-
 .codeBank {
   display: flex;
   height: 100%;
   width: 100%;
 }
-
+@keyframes MovingBlockBank {
+  from {
+    transform: translate(-70px, 0);
+  }
+  to {
+    transform: translate(0, 0px);
+  }
+}
 .blockBank {
   background: #5f709e;
   border-radius: 0 15px 15px 0;
   flex: 1;
-  margin: 0 5px 10px 0px;
+  margin: 0;
   height: 100%;
+  width: 0;
   border-top: none;
   border-left: none;
   border-radius: 0 12px 12px 12px;
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.15);
   overflow: auto;
+  transform: translate(-70px, 0px);
+  transition: transform 400ms cubic-bezier(0.38, 0.41, 0.07, 1.11);
 }
-
+.blockBank.active {
+  transform: translate(0, 0px);
+  width: auto;
+  margin: 0 5px 10px 0px;
+}
 #blockBankTitle {
   background: gainsboro;
   width: 90%;
@@ -106,8 +108,8 @@ body {
   font-family: "Passero One", sans-serif;
   color: #e6af2e;
   font-size: 45px;
+  overflow: hidden;
 }
-
 .ToolBox {
   color: #ececec;
   font-family: "Passero One", sans-serif;
@@ -119,17 +121,14 @@ body {
   padding-bottom: 15px;
   border-bottom: #e6af2e solid 5px;
 }
-
 .codesectionbutton img {
   display: inline;
   width: 40px;
 }
-
 .codesectionbutton:hover {
   background: #737555;
   width: 110%;
 }
-
 .codesectionbutton {
   width: 100%;
   border: none;
@@ -140,7 +139,6 @@ body {
   font-family: "Passero One", sans-serif;
   font-size: 30px;
 }
-
 @media screen and (width <= 443px) {
   .codesectionbutton {
     width: 100%;

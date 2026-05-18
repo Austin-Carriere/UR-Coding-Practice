@@ -94,6 +94,7 @@ SensorsSectionbutton.addEventListener("click", () => {
     });
     selectedSec = false;
   } else {
+    blockBank.classList.remove("active");
     sectionSelected.forEach((value, key) => {
       sectionSelected.set(key, 0);
       sectionSelected.set(SensorsSectionbutton, 1);
@@ -126,10 +127,11 @@ function sectionsButtonUpdate() {
     codeSection.style.width = "65px";
     codeSection.style.maxWidth = "35%";
     blockBank.style.display = "";
+    blockBank.classList.add("active");
   } else {
     codeSection.style.width = "";
     codeSection.style.maxWidth = "";
-    blockBank.style.display = "none";
+    blockBank.classList.remove("active");
   }
 }
 
