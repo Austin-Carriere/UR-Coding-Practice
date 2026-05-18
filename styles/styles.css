@@ -109,6 +109,7 @@ body {
   color: #e6af2e;
   font-size: 45px;
   overflow: hidden;
+  user-select: none;
 }
 .ToolBox {
   color: #ececec;
