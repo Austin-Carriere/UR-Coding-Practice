@@ -239,13 +239,85 @@ class Block {
     };
   }
 
+  resizeToFitContent() {
+    if (!this.foreignObject || !this.pathObject) return;
+
+    this.resizeInputToFitContent();
+
+    const svgRect = this.element.getBoundingClientRect();
+    if (svgRect.width === 0) return;
+
+    if (!this.baseRenderedWidth) {
+      this.baseRenderedWidth = svgRect.width;
+      this.baseRenderedHeight = svgRect.height;
+      this.renderScale = this.baseRenderedWidth / this.baseViewBoxWidth;
+    }
+
+    const visibleChildren = Array.from(this.foreignObject.children).filter(
+      (child) =>
+        child.tagName.toLowerCase() !== "style" &&
+        getComputedStyle(child).display !== "none",
+    );
+
+    const contentRight = visibleChildren.reduce((right, child) => {
+      return Math.max(right, child.getBoundingClientRect().right);
+    }, svgRect.left);
+
+    const desiredRenderedWidth = Math.max(
+      this.baseRenderedWidth,
+      contentRight - svgRect.left + 24,
+    );
+
+    const expandedWidth = desiredRenderedWidth / this.renderScale;
+
+    if (Math.abs(desiredRenderedWidth - svgRect.width) <= 1) return;
+
+    this.element.style.maxWidth = "none";
+    this.element.style.width = desiredRenderedWidth + "px";
+    this.element.style.height = this.baseRenderedHeight + "px";
+
+    if (this.type === "surround") {
+      this.element.style.overflow = "visible";
+      this.element.setAttribute("preserveAspectRatio", "xMinYMin meet");
+      this.resizeSurroundPath(expandedWidth);
+    } else {
+      this.resizeBasicPath(expandedWidth);
+    }
+  }
+
+  resizeInputToFitContent() {
+    if (!this.input || !this.hasInput) return;
+
+    this.input.style.width = "1ch";
+    this.input.style.width = this.input.scrollWidth + "px";
+  }
+
+  resizeBasicPath(expandedWidth) {
+    const rightEdgeStart = expandedWidth - 20;
+
+    this.element.setAttribute("viewBox", `0 0 ${expandedWidth} 95.31`);
+    this.pathObject.setAttribute(
+      "d",
+      `M${rightEdgeStart},2H82.4v6.51l-23.4,13.51-23.4-13.51V2h-15.6C10.06,2,2,10.06,2,20v36c0,9.94,8.06,18,18,18h15.6v6.51l23.4,13.51,23.4-13.51v-6.51H${rightEdgeStart}c9.94,0,18-8.06,18-18V20c0-9.94-8.06-18-18-18Z`,
+    );
+  }
+
+  resizeSurroundPath(expandedWidth) {
+    const extraWidth = expandedWidth - this.baseViewBoxWidth;
+    const topRightStart = 302.65 + extraWidth;
+    const bottomRightEdge = 313.12 + extraWidth;
+    const topBridgeLength = 144.94 + extraWidth;
+
+    this.element.setAttribute("viewBox", "-2 -2 327.42 197.4312");
+    this.pathObject.setAttribute(
+      "d",
+      `M${topRightStart},0H80.64l.06,7.11-23.26,13.68-23.48-13.3-.06-7.48h-15.55C8.21,0,0,8.21,0,18.35v135.06c0,11.05,8.95,20,20,20h14.01l.06,6.84,23.48,13.3,23.26-13.68-.05-6.47H${bottomRightEdge}v-30.52H157.66v7.64l-23.37,13.49-23.37-13.49v-7.64h-47.98l-5.72-3.24v-67.65h53.75l.05,6.48,23.48,13.3,23.26-13.68-.05-6.1h${topBridgeLength}c10.13,0,18.35-8.21,18.35-18.35V18.35c0-10.13-8.21-18.35-18.35-18.35Z`,
+    );
+  }
+
   attachProximity(distance, block) {
     if (
-      Math.abs(
-        this.x +
-          this.element.getBoundingClientRect().width / 2 -
-          (block.x + block.element.getBoundingClientRect().width / 2),
-      ) < distance &&
+      Math.abs(this.x - block.x) < distance &&
       Math.abs(
         this.y - (block.y + block.element.getBoundingClientRect().height),
       ) < distance
@@ -279,19 +351,24 @@ class Block {
     );
 
     pastedBlock.bringToFront();
-
-    if (pastedBlock.input) {
-      pastedBlock.input.value = copyData.inputValue;
-    }
-
-    if (pastedBlock.selectionBox) {
-      pastedBlock.selectionBox.value = copyData.selectionValue;
-    }
+    pastedBlock.applyCopiedValues(copyData);
 
     Block.deselect();
     pastedBlock.selected = true;
 
     return pastedBlock;
+  }
+
+  applyCopiedValues(copyData) {
+    if (this.input) {
+      this.input.value = copyData.inputValue;
+    }
+
+    if (this.selectionBox) {
+      this.selectionBox.value = copyData.selectionValue;
+    }
+
+    this.resizeToFitContent();
   }
 
   delete() {
@@ -379,6 +456,15 @@ class Block {
 
     const pathObject = block.querySelector("#pathObject");
     this.pathObject = pathObject;
+    this.foreignObject = block.querySelector("foreignObject");
+
+    if (this.type === "surround") {
+      this.baseViewBoxWidth = 327.42;
+      this.baseViewBoxHeight = 197.4312;
+    } else {
+      this.baseViewBoxWidth = 325;
+      this.baseViewBoxHeight = 95.31;
+    }
 
     const input = block.querySelector(".blockInput");
     const selectionBox = block.querySelector(".blockSelectionBox");
@@ -391,11 +477,19 @@ class Block {
       selectionBox.addEventListener("mousedown", (event) => {
         event.stopPropagation();
       });
+
+      selectionBox.addEventListener("change", () => {
+        this.resizeToFitContent();
+      });
     }
 
     if (input) {
       input.addEventListener("mousedown", (event) => {
         event.stopPropagation();
+      });
+
+      input.addEventListener("input", () => {
+        this.resizeToFitContent();
       });
     }
 
@@ -543,6 +637,7 @@ class Block {
         );
 
         newBlock.bringToFront();
+        newBlock.applyCopiedValues(this.copyData());
 
         // immediately drag new block
         newBlock.isDragging = true;
@@ -561,7 +656,10 @@ class Block {
       }
 
       // WORKSPACE BLOCKS
-      this.bringToFront();
+      if (!this.child) {
+        this.bringToFront();
+      }
+
       this.isDragging = true;
 
       const rect = block.getBoundingClientRect();
@@ -631,6 +729,10 @@ class Block {
 
   render(parent) {
     parent.appendChild(this.element);
+    this.resizeToFitContent();
+    requestAnimationFrame(() => {
+      this.resizeToFitContent();
+    });
   }
 }
 
