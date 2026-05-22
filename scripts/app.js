@@ -195,6 +195,7 @@ class Block {
     this.selected = false;
 
     this.type = type;
+    this.child = null;
 
     this.section = section;
 
@@ -236,6 +237,22 @@ class Block {
       x: this.x,
       y: this.y,
     };
+  }
+
+  attachProximity(distance, block) {
+    if (
+      Math.abs(
+        this.x +
+          this.element.getBoundingClientRect().width / 2 -
+          (block.x + block.element.getBoundingClientRect().width / 2),
+      ) < distance &&
+      Math.abs(
+        this.y - (block.y + block.element.getBoundingClientRect().height),
+      ) < distance
+    ) {
+      return true;
+    }
+    return false;
   }
 
   static getSelectedBlock() {
@@ -303,6 +320,42 @@ class Block {
     });
   }
 
+  removeParent() {
+    blocks.forEach((block) => {
+      if (block.child === this) {
+        block.child = null;
+      }
+    });
+  }
+
+  getParent() {
+    return blocks.find((block) => block.child === this);
+  }
+
+  repostion(parent) {
+    console.log("repositioning" + this);
+    if (parent && parent.type === "basic") {
+      this.x = parent.x;
+      this.y = parent.y + parent.element.getBoundingClientRect().height * 0.7;
+      this.element.style.left = this.x + "px";
+      this.element.style.top = this.y + "px";
+    } else if (parent && parent.type === "surround") {
+      this.x = parent.x;
+      this.y = parent.y + parent.element.getBoundingClientRect().height * 0.87;
+      this.element.style.left = this.x + "px";
+      this.element.style.top = this.y + "px";
+    }
+
+    this.child?.repostion(this);
+  }
+
+  applyToAllChildren(func) {
+    if (this.child) {
+      func(this.child);
+      this.child.applyToAllChildren(func);
+    }
+  }
+
   createElement() {
     //basic = blockTemplate
     //surrondBlock = surrondBlock
@@ -336,6 +389,12 @@ class Block {
 
     if (selectionBox) {
       selectionBox.addEventListener("mousedown", (event) => {
+        event.stopPropagation();
+      });
+    }
+
+    if (input) {
+      input.addEventListener("mousedown", (event) => {
         event.stopPropagation();
       });
     }
@@ -382,7 +441,7 @@ class Block {
     if (this.section === "move") {
       if (pathObject) {
         pathObject.setAttribute("fill", "#f7e030");
-        pathObject.setAttribute("stroke", "#e0cb27");
+        pathObject.setAttribute("stroke", "#000000");
       }
 
       if (this.hasSelectionBox) {
@@ -395,7 +454,7 @@ class Block {
     } else if (this.section === "logic") {
       if (pathObject) {
         pathObject.setAttribute("fill", "#2200ff");
-        pathObject.setAttribute("stroke", "#5e0eff");
+        pathObject.setAttribute("stroke", "#000000");
       }
 
       if (this.hasSelectionBox) {
@@ -411,7 +470,7 @@ class Block {
     } else if (this.section === "oper") {
       if (pathObject) {
         pathObject.setAttribute("fill", "#ff0e0e");
-        pathObject.setAttribute("stroke", "#d90d0d");
+        pathObject.setAttribute("stroke", "#000000");
       }
 
       if (this.hasSelectionBox) {
@@ -423,12 +482,12 @@ class Block {
       }
     } else if (this.section === "loop") {
       if (pathObject) {
-        pathObject.setAttribute("fill", "#12ff0e");
-        pathObject.setAttribute("stroke", "#10cd10");
+        pathObject.setAttribute("fill", "#50e22f");
+        pathObject.setAttribute("stroke", "#000000");
       }
 
       if (this.hasSelectionBox) {
-        selectionBox.style.backgroundColor = "#0ed50e";
+        selectionBox.style.backgroundColor = "#0dfb0d";
       }
 
       if (this.isTemplate) {
@@ -437,7 +496,7 @@ class Block {
     } else if (this.section === "sens") {
       if (pathObject) {
         pathObject.setAttribute("fill", "#ff0eef");
-        pathObject.setAttribute("stroke", "#df1ad2");
+        pathObject.setAttribute("stroke", "#000000");
       }
 
       if (this.hasSelectionBox) {
@@ -450,9 +509,6 @@ class Block {
     } else {
       console.error("NO SECTION FOUND");
     }
-
-    //----------------------------------Spawn Workspace Block-----------------------------
-
     //---------------------------------Block-Dragging----------------------
 
     this.isDragging = false;
@@ -461,6 +517,8 @@ class Block {
     this.offsetY = 0;
 
     block.addEventListener("mousedown", (event) => {
+      this.element.classList.add("grabbing");
+      this.removeParent();
       // TEMPLATE BLOCKS
       if (this.isTemplate) {
         const canvasRect = canvas.getBoundingClientRect();
@@ -522,10 +580,13 @@ class Block {
 
       block.style.left = this.x + "px";
       block.style.top = this.y + "px";
-      console.log(this.x + " " + this.y);
+      this.child?.repostion(this);
     });
 
     document.addEventListener("mouseup", () => {
+      this.child?.repostion(this);
+      this.applyToAllChildren((child) => child.bringToFront());
+      this.element.classList.remove("grabbing");
       this.isDragging = false;
       if (
         this.x < -10 ||
@@ -534,6 +595,35 @@ class Block {
         this.x > canvas.getBoundingClientRect().width * 0.79
       ) {
         this.delete();
+      }
+
+      if (!this.getParent()) {
+        blocks.forEach((block) => {
+          if (
+            this.attachProximity(20, block) &&
+            block !== this &&
+            block.child === null
+          ) {
+            console.log("snapped");
+            if (block.type === "basic") {
+              this.x = block.x;
+              this.y =
+                block.y + block.element.getBoundingClientRect().height * 0.7;
+              this.element.style.left = this.x + "px";
+              this.element.style.top = this.y + "px";
+              this.bringToFront();
+              block.child = this;
+            } else if (block.type === "surround") {
+              this.x = block.x;
+              this.y =
+                block.y + block.element.getBoundingClientRect().height * 0.87;
+              this.element.style.left = this.x + "px";
+              this.element.style.top = this.y + "px";
+              this.bringToFront();
+              block.child = this;
+            }
+          }
+        });
       }
     });
     return block;
@@ -562,6 +652,8 @@ document.addEventListener("keydown", (event) => {
 
     blocks.forEach((block) => {
       if (block.selected) {
+        block.removeParent();
+        block.applyToAllChildren((child) => child.delete());
         block.delete();
       }
     });
@@ -587,6 +679,10 @@ document.addEventListener("keydown", (event) => {
 //----------------------------------Create Template Blocks-----------------------------
 
 //For option list it is a Map with (NAME, value); const myMap = new Map([[1, "one"],[2, "two"],[3, "three"], ]);
+
+// Block Format: new Block(TEXT (use / to separate title 1 and title 2), SECTION, Selectionbox?, NumericalInput?,
+//  X, Y, Template? (always true), OPTIONS (MAP), TYPE, ACCEPTOR);
+// Just put 0, 0 for x and y. Type: "basic", "surround", WIP. Acceptor: 0 = none, 1 = int acceptor, 2 = boolean acceptor
 
 new Block(
   "Move/seconds",
