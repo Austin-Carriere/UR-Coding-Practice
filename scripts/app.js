@@ -355,7 +355,8 @@ class Block {
 
     Block.deselect();
     pastedBlock.selected = true;
-
+    pastedBlock.removeParent();
+    pastedBlock.child = null;
     return pastedBlock;
   }
 
@@ -377,10 +378,33 @@ class Block {
     this.element.addEventListener(
       "animationend",
       () => {
+        this.removeParent();
         this.element.remove();
 
         const index = blocks.indexOf(this);
 
+        this.child = null;
+        if (index !== -1) {
+          blocks.splice(index, 1);
+        }
+      },
+      { once: true },
+    );
+  }
+
+  deleteRipple() {
+    this.element.classList.add("deleteRipple");
+
+    this.element.addEventListener(
+      "animationend",
+      () => {
+        this.removeParent();
+        this.element.remove();
+        this.child?.deleteRipple();
+
+        const index = blocks.indexOf(this);
+
+        this.child = null;
         if (index !== -1) {
           blocks.splice(index, 1);
         }
@@ -682,7 +706,6 @@ class Block {
     });
 
     document.addEventListener("mouseup", () => {
-      this.child?.repostion(this);
       this.applyToAllChildren((child) => child.bringToFront());
       this.element.classList.remove("grabbing");
       this.isDragging = false;
@@ -696,6 +719,7 @@ class Block {
       }
 
       if (!this.getParent()) {
+        //So child blocks dont snap to other blocks when they are already snapped to a block
         blocks.forEach((block) => {
           if (
             this.attachProximity(20, block) &&
@@ -723,12 +747,23 @@ class Block {
           }
         });
       }
+      this.child?.repostion(this);
     });
     return block;
   }
 
   render(parent) {
     parent.appendChild(this.element);
+
+    if (this.isTemplate) {
+      this.element.style.width = "";
+      this.element.style.height = "";
+      this.element.style.maxWidth = "";
+      this.element.style.overflow = "";
+      this.element.removeAttribute("preserveAspectRatio");
+      return;
+    }
+
     this.resizeToFitContent();
     requestAnimationFrame(() => {
       this.resizeToFitContent();
@@ -754,9 +789,7 @@ document.addEventListener("keydown", (event) => {
 
     blocks.forEach((block) => {
       if (block.selected) {
-        block.removeParent();
-        block.applyToAllChildren((child) => child.delete());
-        block.delete();
+        block.deleteRipple();
       }
     });
   }
