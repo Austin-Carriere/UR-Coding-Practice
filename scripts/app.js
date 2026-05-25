@@ -177,6 +177,7 @@ function openToolBox(section) {
 
 let blocks = new Array();
 let highestBlockLayer = 1;
+let blockStyleScopeId = 0;
 
 class Block {
   constructor(
@@ -188,7 +189,7 @@ class Block {
     y = 0,
     isTemplate = false,
     options = new Map(),
-    type = "basic",
+    type,
     acceptor = 0, //0 = none, 1 = int acceptor, 2 = boolean acceptor
   ) {
     this.text = text;
@@ -445,6 +446,16 @@ class Block {
       this.y = parent.y + parent.element.getBoundingClientRect().height * 0.87;
       this.element.style.left = this.x + "px";
       this.element.style.top = this.y + "px";
+    } else if (parent && parent.type === "doubleSurround") {
+      this.x = parent.x;
+      this.y = parent.y + parent.element.getBoundingClientRect().height * 0.93;
+      this.element.style.left = this.x + "px";
+      this.element.style.top = this.y + "px";
+    } else if (parent && parent.type === "startBlock") {
+      this.x = parent.x * 1;
+      this.y = parent.y + parent.element.getBoundingClientRect().height * 0.76;
+      this.element.style.left = this.x + "px";
+      this.element.style.top = this.y + "px";
     }
 
     this.child?.repostion(this);
@@ -457,6 +468,36 @@ class Block {
     }
   }
 
+  scopeForeignObjectStyles() {
+    if (!this.foreignObject) return;
+
+    blockStyleScopeId += 1;
+    const scopeClass = "block-style-scope-" + blockStyleScopeId;
+    this.foreignObject.classList.add(scopeClass);
+
+    this.foreignObject.querySelectorAll("style").forEach((style) => {
+      style.textContent = style.textContent.replace(
+        /(^|})([^{}]+){/g,
+        (match, brace, selectorGroup) => {
+          const scopedSelectors = selectorGroup
+            .split(",")
+            .map((selector) => selector.trim())
+            .filter(Boolean)
+            .map((selector) => {
+              if (selector.startsWith("@")) {
+                return selector;
+              }
+
+              return "." + scopeClass + " " + selector;
+            })
+            .join(", ");
+
+          return brace + scopedSelectors + " {";
+        },
+      );
+    });
+  }
+
   createElement() {
     //basic = blockTemplate
     //surrondBlock = surrondBlock
@@ -466,6 +507,12 @@ class Block {
       template = document.getElementById("blockTemplate");
     } else if (this.type === "surround") {
       template = document.getElementById("surrondBlock");
+    } else if (this.type === "doubleSurround") {
+      template = document.getElementById("doubleSurrondBlock");
+    } else if (this.type === "startBlock") {
+      template = document.getElementById("startBlock");
+    } else if (this.type === "int") {
+      template = document.getElementById("intBlock");
     } else {
       console.error("NO BLOCK TYPE FOUND");
       template = document.getElementById("blockTemplate");
@@ -481,6 +528,7 @@ class Block {
     const pathObject = block.querySelector("#pathObject");
     this.pathObject = pathObject;
     this.foreignObject = block.querySelector("foreignObject");
+    this.scopeForeignObjectStyles();
 
     if (this.type === "surround") {
       this.baseViewBoxWidth = 327.42;
@@ -520,9 +568,12 @@ class Block {
     //----------------------------------Text-----------------------------
 
     let textSplit = this.text.split("/");
-
-    title1.textContent = textSplit[0] || "";
-    title2.textContent = textSplit[1] || "";
+    if (title1 !== null && title2 !== null) {
+      title1.textContent = textSplit[0] || "";
+      title2.textContent = textSplit[1] || "";
+    } else {
+      console.log("No text to display");
+    }
 
     //----------------------------------Input-----------------------------
 
@@ -635,7 +686,7 @@ class Block {
     this.offsetY = 0;
 
     block.addEventListener("mousedown", (event) => {
-      this.element.classList.add("grabbing");
+      event.preventDefault();
       this.removeParent();
       // TEMPLATE BLOCKS
       if (this.isTemplate) {
@@ -661,6 +712,7 @@ class Block {
         );
 
         newBlock.bringToFront();
+        newBlock.element.classList.add("grabbing");
         newBlock.applyCopiedValues(this.copyData());
 
         // immediately drag new block
@@ -718,8 +770,8 @@ class Block {
         this.delete();
       }
 
-      if (!this.getParent()) {
-        //So child blocks dont snap to other blocks when they are already snapped to a block
+      if (!this.getParent() || this.type === "startBlock") {
+        //So child blocks don't snap to other blocks when they are already snapped to a block
         blocks.forEach((block) => {
           if (
             this.attachProximity(20, block) &&
@@ -739,6 +791,22 @@ class Block {
               this.x = block.x;
               this.y =
                 block.y + block.element.getBoundingClientRect().height * 0.87;
+              this.element.style.left = this.x + "px";
+              this.element.style.top = this.y + "px";
+              this.bringToFront();
+              block.child = this;
+            } else if (block.type === "doubleSurround") {
+              this.x = block.x;
+              this.y =
+                block.y + block.element.getBoundingClientRect().height * 0.93;
+              this.element.style.left = this.x + "px";
+              this.element.style.top = this.y + "px";
+              this.bringToFront();
+              block.child = this;
+            } else if (block.type === "startBlock") {
+              this.x = block.x * 1;
+              this.y =
+                block.y + block.element.getBoundingClientRect().height * 0.76;
               this.element.style.left = this.x + "px";
               this.element.style.top = this.y + "px";
               this.bringToFront();
@@ -820,6 +888,19 @@ document.addEventListener("keydown", (event) => {
 // Just put 0, 0 for x and y. Type: "basic", "surround", WIP. Acceptor: 0 = none, 1 = int acceptor, 2 = boolean acceptor
 
 new Block(
+  "If/else",
+  "logic",
+  false,
+  false,
+  0,
+  0,
+  true,
+  new Map(),
+  "doubleSurround",
+  1,
+);
+
+new Block(
   "Move/seconds",
   "move",
   true,
@@ -851,6 +932,19 @@ new Block(
 new Block("If", "logic", false, false, 0, 0, true, new Map(), "surround", 1);
 
 new Block("Equals", "oper", false, true, 0, 0, true, new Map(), "basic", 0);
+
+new Block(
+  "on Play",
+  "loop",
+  false,
+  false,
+  0,
+  0,
+  true,
+  new Map(),
+  "startBlock",
+  0,
+);
 
 new Block(
   "Repeat/Times",
