@@ -3,36 +3,58 @@
   <head>
     <link rel="stylesheet" href="Test.css" />
   </head>
- <?xml version="1.0" encoding="UTF-8"?>
-        <svg
-          id="Base-Code-Shape"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="-2 -2 320.84 108.65"
-          class="blockSvg"
-        >
-          <path
-            d="M223.84,0H50C22.39,0,0,22.39,0,50v21.48c0,6.63,5.37,12,12,12h21.71l.03,6.63,23.71,13.55,23.58-13.76-.03-6.42h180.84c6.63,0,12-5.37,12-12v-21.48c0-27.61-22.39-50-50-50Z"
-            fill="#fbb040"
-            stroke-width="2"
-            stroke = "#000"
-            id="pathObject"
-          />
-          <foreignObject height="40%" width="100%" x="20" y="25px">
-            <div class="title">On play</div>
-            <style>
-              .title {
+  <?xml version="1.0" encoding="UTF-8"?>
+<svg id="blockSvg" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 110.72 43.2">
+  <rect style="height: 100%; width: 100%;" x="0" y="0" width="107.72" height="40.2" rx="18.35" ry="18.35" fill="#ef4136" id="pathObject"/>
+  <foreignObject height = "100%" width = 95% style="text-align: center; white-space: nowrap;" y="4px">
+    <input type = "number" class = "blockInput" id = "input1">
+    <div class = "title" id = "title1">
+      /
+    </div>
+    <input type = "number" class = "blockInput" id = "input1">
+  <style>
+    .title{
+      display: inline-block;
+      font-size: 20px;
+      font-weight: 600;
+      width: 35px;
+      text-align: center;
+    }
+   .blockInput {
+                min-width: 6px;
+                margin: auto;
                 display: inline;
-                margin: 3px 0px;
-                padding: 3px 0px;
-                width: 40%;
-                display: inline;
-                font-size: 28px;
-                color: rgb(0, 0, 0);
-                font-weight: 550;
+                field-sizing: content;
+                border: 2px solid rgb(0, 0, 0);
+                border-radius: 9px;
+                font-family: sans-serif;
+                font-weight: 600;
+                padding: 2px;
+                min-height: 20%;
+                min-width: 14px;
+                font-size: 20px;
                 font-family: "Elms Sans", sans-serif;
+                text-align: center;
               }
-            </style>
-          </foreignObject>
-        </svg>
+              input::-webkit-outer-spin-button,
+              input::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+              }
+              .blockInput:focus {
+                box-shadow: 2px 2px 8px #181a2a89;
+                outline: none;
+              }
+
+              .blockInput:out-of-range {
+                box-shadow: 2px 2px 8px red;
+                border-color: red;
+              }
+  </style>
+  
+  </foreignObject>
+
+
+
+</svg>
   </body>
 </html>

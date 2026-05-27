@@ -71,6 +71,16 @@
           <p></p>
         </div>
       </div>
+      <div class="sidePanel">
+        <div class= "panelContainer" id = "panelContainer">
+          <button class="panelButton" id="panelButton">
+            <img class="arrowPopup" src="images/Arrow.svg">
+          </button>
+          <div class="panel">
+          <canvas id = "canvas" class="canvasPopup"></canvas>
+        </div>
+         
+      </div>
     </div>
 
     <template class="blockTemplate" id="blockTemplate">
@@ -96,7 +106,12 @@
             y="20%"
             width="95%"
             height="55%"
-            style="text-align: left; padding-left: 5%; white-space: nowrap"
+            style="
+              text-align: left;
+              padding-left: 5%;
+              white-space: nowrap;
+              padding-top: 2px;
+            "
           >
             <div id="title1" class="title">Move</div>
             <select class="blockSelectionBox" id="blockSelectionBox"></select>
@@ -139,17 +154,18 @@
               }
               .blockInput {
                 min-width: 6px;
-                margin: auto;
+                margin: 0;
                 display: inline;
                 field-sizing: content;
                 border: 2px solid rgb(0, 0, 0);
-                border-radius: 9px;
+                border-radius: 15px;
                 font-weight: 600;
                 padding: 2px;
-                min-height: 20%;
+                min-height: 20px;
                 min-width: 14px;
                 font-size: 20px;
                 font-family: "Elms Sans", sans-serif;
+                text-align: center;
               }
               input::-webkit-outer-spin-button,
               input::-webkit-inner-spin-button {
@@ -188,19 +204,18 @@
             id="pathObject"
           />
           <foreignObject
-            x="2%"
-            y="8%"
+            x="7px"
+            y="14px"
             width="95%"
             height="55%"
             style="
               text-align: left;
               padding-left: 5%;
-              padding-top: 2%;
+              padding-top: 3%;
               white-space: nowrap;
             "
           >
             <div class="title" id="title1">Title 1</div>
-            <div class="intacceptor" id="intacceptor"></div>
             <input
               class="blockInput"
               type="number"
@@ -248,6 +263,7 @@
                 min-width: 14px;
                 font-size: 20px;
                 font-family: "Elms Sans", sans-serif;
+                text-align: center;
               }
               input::-webkit-outer-spin-button,
               input::-webkit-inner-spin-button {
@@ -315,7 +331,7 @@
 
               #title2 {
                 display: block;
-                transform: translate(0px, 98px);
+                transform: translate(0px, 94px);
               }
 
               .blockInput {
@@ -332,6 +348,7 @@
                 min-width: 14px;
                 font-size: 20px;
                 font-family: "Elms Sans", sans-serif;
+                text-align: center;
               }
               input::-webkit-outer-spin-button,
               input::-webkit-inner-spin-button {
@@ -387,64 +404,38 @@
       </div>
     </template>
 
-    <template class="intblock" id="intblock">
+    <template class="intBlock" id="intBlock">
       <div class="block">
-        <?xml version="1.0" encoding="UTF-8"?>
-        <svg
-          id="Base-Code-Shape"
-          data-name="Layer 1"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="-2 -5 165 66"
-          class="blockSvg"
-        >
-          <rect
-            x="0"
-            y="0"
-            width="150"
-            height="60"
-            rx="30"
-            ry="30"
-            fill="#ef4136"
-            stroke="#000"
-            id="pathObject"
-          />
-          <foreignObject
-            width="150"
-            height="60"
-            x="0"
-            y="3px"
-            style="text-align: center; white-space: nowrap"
-          >
-            <div class="title" id="title1">Title1</div>
-            <input class="blockInput" id="input1"></input>
-            <div class="title" id="title2">-</div>
-            <input class="blockInput" id="input2"></input>
-            <style>
-              .title,
-              .input {
-                display: inline-block;
-              }
-              .title {
-                padding: 0;
-                margin: 0;
-                font-size: 36px;
-                font-weight: 900;
-                width: auto;
-                transform: translateY(4px);
-              }
-              #title1 {
-                display: none;
-              }
-              .blockInput {
+         <?xml version="1.0" encoding="UTF-8"?>
+      <svg class="blockSvg" id="Base-Code-Shape" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 110.72 43.2">
+    <rect x="0" y="0" width="107.72" height="40.2" rx="18.35" ry="18.35" fill="#ef4136" id="pathObject"   stroke-miterlimit="10"
+            stroke-width="2"/>
+  <foreignObject height = "100%" width = 95% style="text-align: center;" y="4px">
+    <input type = "number" class = "blockInput" id = "input1">
+    <div class = "title" id = "title1">
+      /
+    </div>
+    <input type = "number" class = "blockInput" id = "input1">
+  <style>
+    .title{
+      display: inline-block;
+      font-size: 20px;
+      font-weight: 600;
+      width: 35px;
+      text-align: center;
+    }
+   .blockInput {
                 min-width: 6px;
-                width: 23px;
-                margin: auto 13px;
+                margin: auto;
+                display: inline;
+                field-sizing: content;
                 border: 2px solid rgb(0, 0, 0);
-                border-radius: 13px;
+                border-radius: 9px;
                 font-family: sans-serif;
-                font-weight: 500;
+                font-weight: 600;
                 padding: 2px;
-                min-height: 50%;
+                min-height: 20%;
+                min-width: 14px;
                 font-size: 20px;
                 font-family: "Elms Sans", sans-serif;
                 text-align: center;
@@ -462,9 +453,13 @@
                 box-shadow: 2px 2px 8px red;
                 border-color: red;
               }
-            </style>
-          </foreignObject>
-        </svg>
+  </style>
+  
+  </foreignObject>
+
+
+
+</svg>
       </div>
     </template>
   </body>
