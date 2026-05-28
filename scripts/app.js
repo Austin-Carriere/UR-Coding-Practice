@@ -178,6 +178,7 @@ function openToolBox(section) {
 let blocks = new Array();
 let highestBlockLayer = 1;
 let blockStyleScopeId = 0;
+const blockSnapOverlap = 6.5;
 
 class Block {
   constructor(
@@ -233,6 +234,7 @@ class Block {
       options: this.options,
       type: this.type,
       acceptor: this.acceptor,
+      inputValues: this.inputs ? this.inputs.map((input) => input.value) : [],
       inputValue: this.input ? this.input.value : "",
       selectionValue: this.selectionBox ? this.selectionBox.value : "",
       x: this.x,
@@ -254,7 +256,14 @@ class Block {
       this.renderScale = this.baseRenderedWidth / this.baseViewBoxWidth;
     }
 
-    const visibleChildren = Array.from(this.foreignObject.children).filter(
+    if (this.type === "int") {
+      this.resizeIntPath();
+      return;
+    }
+
+    const visibleChildren = Array.from(
+      this.foreignObject.querySelectorAll("*"),
+    ).filter(
       (child) =>
         child.tagName.toLowerCase() !== "style" &&
         getComputedStyle(child).display !== "none",
@@ -273,10 +282,10 @@ class Block {
 
     if (Math.abs(desiredRenderedWidth - svgRect.width) <= 1) return;
 
-    this.element.style.maxWidth = "none";
-    this.element.style.width = desiredRenderedWidth + "px";
-
     if (this.type === "surround" || this.type === "doubleSurround") {
+      this.element.style.maxWidth = "none";
+      this.element.style.width = desiredRenderedWidth + "px";
+
       if (this.type === "surround") {
         this.horizontalExpandedWidth = expandedWidth;
       }
@@ -284,16 +293,40 @@ class Block {
       this.element.setAttribute("preserveAspectRatio", "xMinYMin meet");
       this.applySurroundSize();
     } else {
+      this.element.style.maxWidth = "none";
+      this.element.style.width = desiredRenderedWidth + "px";
       this.element.style.height = this.baseRenderedHeight + "px";
       this.resizeBasicPath(expandedWidth);
     }
   }
 
   resizeInputToFitContent() {
-    if (!this.input || !this.hasInput) return;
+    if (!this.inputs || !this.hasInput) return;
 
-    this.input.style.width = "1ch";
-    this.input.style.width = this.input.scrollWidth + "px";
+    this.inputs.forEach((input) => {
+      input.style.width = this.measureInputWidth(input) + "px";
+    });
+  }
+
+  measureInputWidth(input) {
+    const style = getComputedStyle(input);
+    const canvas =
+      Block.inputMeasureCanvas ||
+      (Block.inputMeasureCanvas = document.createElement("canvas"));
+    const context = canvas.getContext("2d");
+    const text = input.value || input.placeholder || "";
+    const padding =
+      parseFloat(style.paddingLeft) +
+      parseFloat(style.paddingRight) +
+      parseFloat(style.borderLeftWidth) +
+      parseFloat(style.borderRightWidth);
+
+    context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+
+    return Math.max(
+      Math.ceil(context.measureText(text).width + padding + 8),
+      34,
+    );
   }
 
   resizeBasicPath(expandedWidth) {
@@ -304,6 +337,21 @@ class Block {
       "d",
       `M${rightEdgeStart},2H82.4v6.51l-23.4,13.51-23.4-13.51V2h-15.6C10.06,2,2,10.06,2,20v36c0,9.94,8.06,18,18,18h15.6v6.51l23.4,13.51,23.4-13.51v-6.51H${rightEdgeStart}c9.94,0,18-8.06,18-18V20c0-9.94-8.06-18-18-18Z`,
     );
+  }
+
+  resizeIntPath(expandedWidth = this.baseViewBoxWidth) {
+    const content = this.foreignObject.querySelector(".intBlockContent");
+    const contentWidth = content ? content.scrollWidth + 22 : 0;
+    const width = Math.max(this.baseViewBoxWidth, expandedWidth, contentWidth);
+
+    this.element.setAttribute("viewBox", `0 0 ${width} 46`);
+    this.pathObject.setAttribute("width", width - 2);
+    this.foreignObject.setAttribute("width", width - 14);
+    this.foreignObject.setAttribute("height", "36");
+    this.foreignObject.setAttribute("y", "5");
+    this.element.style.maxWidth = "none";
+    this.element.style.width = width * this.renderScale + "px";
+    this.element.style.height = this.baseRenderedHeight + "px";
   }
 
   applySurroundSize() {
@@ -348,7 +396,10 @@ class Block {
       "d",
       `M321.21,53.61l-.09-35.3C321.1,8.17,312.86-.02,302.73,0L80.72.54l.07,7.11-23.23,13.74-23.51-13.25-.08-7.48-15.55.04C8.29.71.1,8.95.12,19.08l.07,27.3h-.19v${234.52 + extraHeight}c0,11.05,8.95,20,20,20h13.96v6.49l23.37,13.49,23.37-13.49v-6.15h221.58c5.52,0,10-4.48,10-10v-10.52c0-5.52-4.48-10-10-10h-145.46v7.64l-23.37,13.49-23.37-13.49v-7.64h-46.15l-6.6-3.81-.11.06v-66.03h53.51v5.32l23.39,13.49,23.39-13.49v-5.32h145.42c5.52,0,10-4.48,10-10v-17.21h.18v-20.52c0-5.52-4.48-10-10-10h-145.46v7.64l-23.37,13.49-23.37-13.49v-7.64h-47.46l-6.24-3.6v-${67.02 + extraHeight}l54.01-.13.07,6.48,23.51,13.25,23.23-13.74-.06-6.1,144.94-.35c10.13-.02,18.33-8.26,18.3-18.39Z`,
     );
-    this.title2.style.transform = "translateY(" + renderedHeight / 2 + "px)";
+    if (this.title2) {
+      const title2Offset = 94 + extraHeight;
+      this.title2.style.transform = `translate(0px, ${title2Offset}px)`;
+    }
   }
 
   getChainBlocks(startBlock = this) {
@@ -371,22 +422,32 @@ class Block {
     if (this.specialChild) {
       const chain = this.getChainBlocks(this.specialChild);
 
-      if (!(chain.length === 1 && chain[0].type === "basic")) {
-        const firstHeight = chain[0].element.getBoundingClientRect().height;
-        const lastBlock = chain[chain.length - 1];
-        const chainHeight =
-          lastBlock.y +
-          lastBlock.element.getBoundingClientRect().height -
-          chain[0].y;
+      const firstHeight = chain[0].element.getBoundingClientRect().height;
 
-        extraRenderedHeight = Math.max(0, chainHeight - firstHeight);
-      }
+      const basicSlotHeight = 95.31 * this.renderScale;
+      const firstBlockOverflow =
+        chain[0].type === "basic"
+          ? 0
+          : Math.max(0, firstHeight - basicSlotHeight);
+
+      const childOverflow = chain.slice(1).reduce((height, block) => {
+        return (
+          height +
+          Math.max(
+            0,
+            block.element.getBoundingClientRect().height - blockSnapOverlap * 2,
+          )
+        );
+      }, 0);
+
+      extraRenderedHeight = childOverflow + firstBlockOverflow;
     }
 
     this.verticalExtraHeight = extraRenderedHeight / this.renderScale;
     this.applySurroundSize();
     this.specialChild?.specialReposition();
     this.child?.repostion(this);
+    this.parent?.updateConnectedSurrounds();
   }
 
   checkOutOfBounds() {
@@ -409,28 +470,27 @@ class Block {
     }
     if (block.type === "surround") {
       if (
-        Math.abs(this.x - (block.x + 44)) < distance &&
+        Math.abs(this.x - (block.x + 43)) < distance &&
         Math.abs(
           this.y -
             (block.y +
               (block.baseRenderedHeight ||
                 block.element.getBoundingClientRect().height) -
-              73),
+              69),
         ) < distance
       ) {
-        console.log("specialAttach: attaching to surround block");
         return true;
       }
     } else {
       //double surround
       if (
-        Math.abs(this.x - (block.x + 45.5)) < distance &&
+        Math.abs(this.x - (block.x + 43.5)) < distance &&
         Math.abs(
           this.y -
             (block.y +
               (block.baseRenderedHeight ||
                 block.element.getBoundingClientRect().height) -
-              148),
+              140),
         ) < distance
       ) {
         return true;
@@ -485,8 +545,11 @@ class Block {
   }
 
   applyCopiedValues(copyData) {
-    if (this.input) {
-      this.input.value = copyData.inputValue;
+    if (this.inputs) {
+      this.inputs.forEach((input, index) => {
+        input.value =
+          copyData.inputValues?.[index] ?? copyData.inputValue ?? "";
+      });
     }
 
     if (this.selectionBox) {
@@ -652,21 +715,21 @@ class Block {
     this.bringToFront();
     if (!this.parent || this.parent.specialChild !== this) return;
     if (this.parent.type === "surround") {
-      this.x = this.parent.x + 44;
+      this.x = this.parent.x + 43;
       this.y =
         this.parent.y +
         (this.parent.baseRenderedHeight ||
           this.parent.element.getBoundingClientRect().height) -
-        73;
+        69;
       this.element.style.left = this.x + "px";
       this.element.style.top = this.y + "px";
     } else {
-      this.x = this.parent.x + 45.5;
+      this.x = this.parent.x + 43.5;
       this.y =
         this.parent.y +
         (this.parent.baseRenderedHeight ||
           this.parent.element.getBoundingClientRect().height) -
-        148;
+        140;
       this.element.style.left = this.x + "px";
       this.element.style.top = this.y + "px";
     }
@@ -734,9 +797,11 @@ class Block {
     const block = template.content
       .cloneNode(true)
       .querySelector("#Base-Code-Shape");
+    block.classList.add("blockSvg--" + this.type);
 
     const title1 = block.querySelector("#title1");
     const title2 = block.querySelector("#title2");
+    this.title2 = title2;
 
     const pathObject = block.querySelector("#pathObject");
     this.pathObject = pathObject;
@@ -749,14 +814,19 @@ class Block {
     } else if (this.type === "doubleSurround") {
       this.baseViewBoxWidth = 323.21;
       this.baseViewBoxHeight = 322.89;
+    } else if (this.type === "int") {
+      this.baseViewBoxWidth = 120;
+      this.baseViewBoxHeight = 46;
     } else {
       this.baseViewBoxWidth = 325;
       this.baseViewBoxHeight = 95.31;
     }
 
-    const input = block.querySelector(".blockInput");
+    const inputs = Array.from(block.querySelectorAll(".blockInput"));
+    const input = inputs[0] || null;
     const selectionBox = block.querySelector(".blockSelectionBox");
     const intAcceptor = block.querySelector(".intacceptor");
+    this.inputs = inputs;
     this.input = input;
     this.selectionBox = selectionBox;
     this.intAcceptor = intAcceptor;
@@ -771,7 +841,7 @@ class Block {
       });
     }
 
-    if (input) {
+    inputs.forEach((input) => {
       input.addEventListener("mousedown", (event) => {
         event.stopPropagation();
       });
@@ -779,7 +849,7 @@ class Block {
       input.addEventListener("input", () => {
         this.resizeToFitContent();
       });
-    }
+    });
 
     //----------------------------------Text-----------------------------
 
@@ -801,8 +871,10 @@ class Block {
       });
     }
 
-    if (!this.hasInput && input) {
-      input.style.display = "none";
+    if (!this.hasInput) {
+      inputs.forEach((input) => {
+        input.style.display = "none";
+      });
     }
 
     if (intAcceptor && this.acceptor !== 1) {
@@ -901,6 +973,20 @@ class Block {
     this.offsetX = 0;
     this.offsetY = 0;
 
+    block.addEventListener("mouseover", () => {
+      if (!this.isDragging) {
+        block.style.cursor = "grab";
+      } else {
+        block.style.cursor = "grabbing";
+      }
+    });
+
+    block.addEventListener("mouseleave", () => {
+      if (!this.isDragging) {
+        block.style.cursor = "default";
+      }
+    });
+
     block.addEventListener("mousedown", (event) => {
       event.preventDefault();
       this.removeParent();
@@ -928,7 +1014,6 @@ class Block {
         );
 
         newBlock.bringToFront();
-        newBlock.element.classList.add("grabbing");
         newBlock.applyCopiedValues(this.copyData());
 
         // immediately drag new block
@@ -953,7 +1038,7 @@ class Block {
       }
 
       this.isDragging = true;
-
+      this.element.style.cursor = "grabbing";
       const rect = block.getBoundingClientRect();
 
       this.offsetX = event.clientX - rect.left;
@@ -978,7 +1063,7 @@ class Block {
       this.checkOutOfBounds();
 
       this.applyToAllChildren((child) => child.bringToFront());
-      this.element.classList.remove("grabbing");
+      this.element.style.cursor = "grab";
       this.isDragging = false;
 
       if (!this.getParent() || this.type === "startBlock") {
@@ -1039,19 +1124,19 @@ class Block {
                 block.y +
                 (block.baseRenderedHeight ||
                   block.element.getBoundingClientRect().height) -
-                73;
+                69;
               this.element.style.left = this.x + "px";
               this.element.style.top = this.y + "px";
               block.setSpecialChild(this);
               console.log("snapped");
             } else if (block.type === "doubleSurround") {
               console.log("specialAttach: attaching to double surround block");
-              this.x = block.x + 45.5;
+              this.x = block.x + 43.5;
               this.y =
                 block.y +
                 (block.baseRenderedHeight ||
                   block.element.getBoundingClientRect().height) -
-                148;
+                140;
               this.element.style.left = this.x + "px";
               this.element.style.top = this.y + "px";
               block.setSpecialChild(this);
@@ -1074,7 +1159,12 @@ class Block {
       this.element.style.height = "";
       this.element.style.maxWidth = "";
       this.element.style.overflow = "";
-      this.element.removeAttribute("preserveAspectRatio");
+      if (this.type !== "int") {
+        this.element.removeAttribute("preserveAspectRatio");
+      }
+      requestAnimationFrame(() => {
+        this.resizeToFitContent();
+      });
       return;
     }
 
@@ -1211,16 +1301,19 @@ new Block("/", "oper", false, true, 0, 0, true, new Map(), "int", 0);
 
 const panelContainer = document.getElementById("panelContainer");
 const pannelButton = document.getElementById("panelButton");
-
-let panelActice = false;
+const panelArrow = document.getElementById("panelArrow");
+let panelActive = false;
 
 pannelButton.addEventListener("click", () => {
   console.log("clicked");
-  if (panelActice) {
+  if (panelActive) {
     panelContainer.classList.remove("active");
-    panelActice = false;
+    panelArrow.classList.remove("active");
+    panelActive = false;
   } else {
-    panelContainer.classList.toggle("active");
-    panelActice = true;
+    panelArrow.classList.add("active");
+    panelContainer.classList.add("active");
+
+    panelActive = true;
   }
 });
