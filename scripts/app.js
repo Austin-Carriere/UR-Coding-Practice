@@ -200,6 +200,7 @@ class Block {
     this.child = null; // connected block below
     this.parent = null; // connected block above
     this.specialChild = null; // surround and double surround inserted block (only first)
+    this.otherChild = null; // the child of the extra surround in double surround
     this.section = section;
 
     this.hasInput = hasInput;
@@ -340,18 +341,41 @@ class Block {
   }
 
   resizeIntPath(expandedWidth = this.baseViewBoxWidth) {
-    const content = this.foreignObject.querySelector(".intBlockContent");
-    const contentWidth = content ? content.scrollWidth + 22 : 0;
+    const contentWidth = this.measureIntContentWidth();
     const width = Math.max(this.baseViewBoxWidth, expandedWidth, contentWidth);
-
-    this.element.setAttribute("viewBox", `0 0 ${width} 46`);
-    this.pathObject.setAttribute("width", width - 2);
-    this.foreignObject.setAttribute("width", width - 14);
-    this.foreignObject.setAttribute("height", "36");
+    const rect = this.element.querySelector("rect");
+    console.log(contentWidth, width);
+    this.element.setAttribute("viewBox", `0 0 ${contentWidth + 36} 46`);
+    rect.setAttribute("width", contentWidth + 36);
+    this.element.setAttribute("preserveAspectRatio", "xMinYMid meet");
+    this.foreignObject.setAttribute("height", "46");
     this.foreignObject.setAttribute("y", "5");
     this.element.style.maxWidth = "none";
-    this.element.style.width = width * this.renderScale + "px";
+    this.element.style.width = width - 32 + "px";
     this.element.style.height = this.baseRenderedHeight + "px";
+  }
+
+  measureIntContentWidth() {
+    const content = this.foreignObject.querySelector(".intBlockContent");
+    if (!content) return 0;
+
+    const style = getComputedStyle(content);
+    const gap = parseFloat(style.columnGap || style.gap) || 0;
+    const padding =
+      (parseFloat(style.paddingLeft) || 0) +
+      (parseFloat(style.paddingRight) || 0);
+    const children = Array.from(content.children).filter(
+      (child) => getComputedStyle(child).display !== "none",
+    );
+
+    let childrenWidth = 0;
+
+    children.forEach((child) => {
+      childrenWidth += child.getBoundingClientRect().width;
+    });
+    const gapsWidth = Math.max(0, children.length - 1) * gap;
+
+    return childrenWidth * 1.5 + gapsWidth + padding + 24;
   }
 
   applySurroundSize() {
@@ -364,7 +388,10 @@ class Block {
         this.verticalExtraHeight || 0,
       );
     } else if (this.type === "doubleSurround") {
-      this.resizeDoubleSurroundPath(this.verticalExtraHeight || 0);
+      this.resizeDoubleSurroundPath(
+        this.verticalExtraHeight || 0,
+        this.otherVerticalExtraHeight || 0,
+      );
     }
   }
 
@@ -385,21 +412,47 @@ class Block {
     );
   }
 
-  resizeDoubleSurroundPath(extraHeight) {
-    const viewBoxHeight = this.baseViewBoxHeight + extraHeight;
+  resizeDoubleSurroundPath(extraHeight, otherExtraHeight = 0) {
+    const totalExtraHeight = extraHeight + otherExtraHeight;
+    const viewBoxHeight = this.baseViewBoxHeight + totalExtraHeight;
     const renderedHeight =
-      this.baseRenderedHeight + extraHeight * this.renderScale;
+      this.baseRenderedHeight + totalExtraHeight * this.renderScale;
 
     this.element.style.height = renderedHeight + "px";
     this.element.setAttribute("viewBox", `-2 -2 323.21 ${viewBoxHeight}`);
     this.pathObject.setAttribute(
       "d",
-      `M321.21,53.61l-.09-35.3C321.1,8.17,312.86-.02,302.73,0L80.72.54l.07,7.11-23.23,13.74-23.51-13.25-.08-7.48-15.55.04C8.29.71.1,8.95.12,19.08l.07,27.3h-.19v${234.52 + extraHeight}c0,11.05,8.95,20,20,20h13.96v6.49l23.37,13.49,23.37-13.49v-6.15h221.58c5.52,0,10-4.48,10-10v-10.52c0-5.52-4.48-10-10-10h-145.46v7.64l-23.37,13.49-23.37-13.49v-7.64h-46.15l-6.6-3.81-.11.06v-66.03h53.51v5.32l23.39,13.49,23.39-13.49v-5.32h145.42c5.52,0,10-4.48,10-10v-17.21h.18v-20.52c0-5.52-4.48-10-10-10h-145.46v7.64l-23.37,13.49-23.37-13.49v-7.64h-47.46l-6.24-3.6v-${67.02 + extraHeight}l54.01-.13.07,6.48,23.51,13.25,23.23-13.74-.06-6.1,144.94-.35c10.13-.02,18.33-8.26,18.3-18.39Z`,
+      `M321.21,53.61l-.09-35.3C321.1,8.17,312.86-.02,302.73,0L80.72.54l.07,7.11-23.23,13.74-23.51-13.25-.08-7.48-15.55.04C8.29.71.1,8.95.12,19.08l.07,27.3h-.19v${234.52 + totalExtraHeight}c0,11.05,8.95,20,20,20h13.96v6.49l23.37,13.49,23.37-13.49v-6.15h221.58c5.52,0,10-4.48,10-10v-10.52c0-5.52-4.48-10-10-10h-145.46v7.64l-23.37,13.49-23.37-13.49v-7.64h-46.15l-6.6-3.81-.11.06v-${66.03 + otherExtraHeight}h53.51v5.32l23.39,13.49,23.39-13.49v-5.32h145.42c5.52,0,10-4.48,10-10v-17.21h.18v-20.52c0-5.52-4.48-10-10-10h-145.46v7.64l-23.37,13.49-23.37-13.49v-7.64h-47.46l-6.24-3.6v-${67.02 + extraHeight}l54.01-.13.07,6.48,23.51,13.25,23.23-13.74-.06-6.1,144.94-.35c10.13-.02,18.33-8.26,18.3-18.39Z`,
     );
     if (this.title2) {
       const title2Offset = 94 + extraHeight;
       this.title2.style.transform = `translate(0px, ${title2Offset}px)`;
     }
+    this.otherChild?.otherReposition();
+  }
+
+  getChainExtraRenderedHeight(startBlock) {
+    if (!startBlock) return 0;
+
+    const chain = this.getChainBlocks(startBlock);
+    const firstHeight = chain[0].element.getBoundingClientRect().height;
+    const basicSlotHeight = 95.31 * this.renderScale;
+    const firstBlockOverflow =
+      chain[0].type === "basic"
+        ? 0
+        : Math.max(0, firstHeight - basicSlotHeight);
+
+    const childOverflow = chain.slice(1).reduce((height, block) => {
+      return (
+        height +
+        Math.max(
+          0,
+          block.element.getBoundingClientRect().height - blockSnapOverlap * 2,
+        )
+      );
+    }, 0);
+
+    return childOverflow + firstBlockOverflow;
   }
 
   getChainBlocks(startBlock = this) {
@@ -418,34 +471,23 @@ class Block {
     if (this.type !== "surround" && this.type !== "doubleSurround") return;
 
     let extraRenderedHeight = 0;
+    let otherExtraRenderedHeight = 0;
 
     if (this.specialChild) {
-      const chain = this.getChainBlocks(this.specialChild);
+      extraRenderedHeight = this.getChainExtraRenderedHeight(this.specialChild);
+    }
 
-      const firstHeight = chain[0].element.getBoundingClientRect().height;
-
-      const basicSlotHeight = 95.31 * this.renderScale;
-      const firstBlockOverflow =
-        chain[0].type === "basic"
-          ? 0
-          : Math.max(0, firstHeight - basicSlotHeight);
-
-      const childOverflow = chain.slice(1).reduce((height, block) => {
-        return (
-          height +
-          Math.max(
-            0,
-            block.element.getBoundingClientRect().height - blockSnapOverlap * 2,
-          )
-        );
-      }, 0);
-
-      extraRenderedHeight = childOverflow + firstBlockOverflow;
+    if (this.type === "doubleSurround" && this.otherChild) {
+      otherExtraRenderedHeight = this.getChainExtraRenderedHeight(
+        this.otherChild,
+      );
     }
 
     this.verticalExtraHeight = extraRenderedHeight / this.renderScale;
+    this.otherVerticalExtraHeight = otherExtraRenderedHeight / this.renderScale;
     this.applySurroundSize();
     this.specialChild?.specialReposition();
+    this.otherChild?.otherReposition();
     this.child?.repostion(this);
     this.parent?.updateConnectedSurrounds();
   }
@@ -459,6 +501,14 @@ class Block {
     ) {
       this.delete();
     }
+  }
+
+  getDoubleSurroundExtraY() {
+    const baseElseAttachY = this.y + this.baseRenderedHeight - 140;
+    const extraRenderedHeight =
+      (this.verticalExtraHeight || 0) * this.renderScale;
+
+    return baseElseAttachY + extraRenderedHeight + 72;
   }
 
   specialAttach(distance, block) {
@@ -508,6 +558,20 @@ class Block {
       return true;
     }
     return false;
+  }
+
+  otherAttach(distance, block) {
+    if (block.type !== "doubleSurround") return false;
+    console.log(Math.abs(this.y - block.getDoubleSurroundExtraY()));
+    if (
+      Math.abs(this.x - (block.x + 43.5)) < distance &&
+      Math.abs(this.y - block.getDoubleSurroundExtraY()) < distance
+    ) {
+      console.log("other attach");
+      return true;
+    } else {
+      return false;
+    }
   }
 
   static getSelectedBlock() {
@@ -590,6 +654,7 @@ class Block {
         this.element.remove();
         this.child?.deleteRipple();
         this.specialChild?.deleteRipple();
+        this.otherChild?.deleteRipple();
         const index = blocks.indexOf(this);
 
         this.removeChild();
@@ -606,6 +671,8 @@ class Block {
     blocks.forEach((block) => {
       if (block.selected) {
         block.selected = false;
+        //block.pathObject.setAttribute("stroke", "#000000");
+        //block.pathObject.setAttribute("stroke-width", "2");
       }
     });
   }
@@ -621,6 +688,10 @@ class Block {
 
     if (this.parent.specialChild === this) {
       this.parent.specialChild = null;
+    }
+
+    if (this.parent.otherChild === this) {
+      this.parent.otherChild = null;
     }
 
     this.parent = null;
@@ -671,6 +742,26 @@ class Block {
     this.updateSurroundHeight();
   }
 
+  setOtherChild(child) {
+    if (this.otherChild && this.otherChild !== child) {
+      this.otherChild.parent = null;
+    }
+
+    child.removeParent();
+    this.otherChild = child;
+    child.parent = this;
+    this.updateConnectedSurrounds();
+  }
+
+  removeOtherChild() {
+    if (this.otherChild) {
+      this.otherChild.parent = null;
+    }
+
+    this.otherChild = null;
+    this.updateSurroundHeight();
+  }
+
   updateConnectedSurrounds() {
     let block = this;
 
@@ -709,6 +800,7 @@ class Block {
 
     this.child?.repostion(this);
     this.specialChild?.specialReposition();
+    this.otherChild?.otherReposition();
   }
 
   specialReposition() {
@@ -735,6 +827,19 @@ class Block {
     }
     this.child?.repostion(this);
     this.specialChild?.specialReposition();
+    this.otherChild?.otherReposition();
+  }
+
+  otherReposition() {
+    this.bringToFront();
+    if (!this.parent || this.parent.otherChild !== this) return;
+    this.x = this.parent.x + 43.5;
+    this.y = this.parent.getDoubleSurroundExtraY();
+    this.element.style.left = this.x + "px";
+    this.element.style.top = this.y + "px";
+    this.child?.repostion(this);
+    this.specialChild?.specialReposition();
+    this.otherChild?.otherReposition();
   }
 
   applyToAllChildren(func) {
@@ -854,8 +959,10 @@ class Block {
     //----------------------------------Text-----------------------------
 
     let textSplit = this.text.split("$");
-    if (title1 !== null && title2 !== null) {
+    if (title1 !== null) {
       title1.textContent = textSplit[0] || "";
+    }
+    if (title2 !== null) {
       title2.textContent = textSplit[1] || "";
     } else {
       console.log("No text to display");
@@ -1030,6 +1137,8 @@ class Block {
         Block.deselect();
 
         this.selected = true;
+        //this.pathObject.setAttribute("stroke", "#ffed77");
+        //this.pathObject.setAttribute("stroke-width", "4");
       }
 
       // WORKSPACE BLOCKS
@@ -1045,19 +1154,22 @@ class Block {
       this.offsetY = event.clientY - rect.top;
     });
 
-    document.addEventListener("mousemove", (event) => {
-      if (!this.isDragging) return;
+    if (!this.isTemplate) {
+      document.addEventListener("mousemove", (event) => {
+        if (!this.isDragging) return;
 
-      const canvasRect = canvas.getBoundingClientRect();
+        const canvasRect = canvas.getBoundingClientRect();
 
-      this.x = event.clientX - canvasRect.left - this.offsetX;
-      this.y = event.clientY - canvasRect.top - this.offsetY;
+        this.x = event.clientX - canvasRect.left - this.offsetX;
+        this.y = event.clientY - canvasRect.top - this.offsetY;
 
-      block.style.left = this.x + "px";
-      block.style.top = this.y + "px";
-      this.child?.repostion(this);
-      this.specialChild?.specialReposition();
-    });
+        block.style.left = this.x + "px";
+        block.style.top = this.y + "px";
+        this.child?.repostion(this);
+        this.specialChild?.specialReposition();
+        this.otherChild?.otherReposition();
+      });
+    }
 
     document.addEventListener("mouseup", () => {
       this.checkOutOfBounds();
@@ -1066,11 +1178,26 @@ class Block {
       this.element.style.cursor = "grab";
       this.isDragging = false;
 
-      if (!this.getParent() || this.type === "startBlock") {
+      if (
+        !this.getParent() &&
+        this.type !== "startBlock" &&
+        this.type !== "int"
+      ) {
         //So child blocks don't snap to other blocks when they are already snapped to a block
         blocks.forEach((block) => {
           if (
-            this.attachProximity(20, block) &&
+            this.otherAttach(20, block) &&
+            block !== this &&
+            block.otherChild === null
+          ) {
+            block.setOtherChild(this);
+            this.x = block.x + 43.5;
+            this.y = block.getDoubleSurroundExtraY();
+            this.element.style.left = this.x + "px";
+            this.element.style.top = this.y + "px";
+          }
+          if (
+            this.attachProximity(15, block) &&
             block !== this &&
             block.child === null
           ) {
@@ -1267,7 +1394,7 @@ new Block(
 
 new Block("If", "logic", false, false, 0, 0, true, new Map(), "surround", 1);
 
-new Block("Equals", "oper", false, true, 0, 0, true, new Map(), "basic", 0);
+new Block("=", "oper", false, true, 0, 0, true, new Map(), "int", 0);
 
 new Block(
   "on Play",
