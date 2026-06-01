@@ -202,6 +202,8 @@ class Block {
     this.specialChild = null; // surround and double surround inserted block (only first)
     this.otherChild = null; // the child of the extra surround in double surround
     this.section = section;
+    this.inputVariables = []; // for int blocks, store the connected int blocks for each input
+    this.parentInput = null;
 
     this.hasInput = hasInput;
     this.hasSelectionBox = hasSelectionBox;
@@ -304,9 +306,19 @@ class Block {
   resizeInputToFitContent() {
     if (!this.inputs || !this.hasInput) return;
 
-    this.inputs.forEach((input) => {
-      input.style.width = this.measureInputWidth(input) + "px";
+    this.inputs.forEach((input, index) => {
+      const attachedBlock = this.inputVariables[index];
+
+      if (attachedBlock) {
+        input.style.width = this.getInputBlockSocketWidth(attachedBlock) + "px";
+      } else {
+        input.style.width = this.measureInputWidth(input) + "px";
+      }
     });
+  }
+
+  getInputBlockSocketWidth(intBlock) {
+    return intBlock.element.getBoundingClientRect().width * 1.66;
   }
 
   measureInputWidth(input) {
@@ -344,7 +356,6 @@ class Block {
     const contentWidth = this.measureIntContentWidth();
     const width = Math.max(this.baseViewBoxWidth, expandedWidth, contentWidth);
     const rect = this.element.querySelector("rect");
-    console.log(contentWidth, width);
     this.element.setAttribute("viewBox", `0 0 ${contentWidth + 36} 46`);
     rect.setAttribute("width", contentWidth + 36);
     this.element.setAttribute("preserveAspectRatio", "xMinYMid meet");
@@ -353,6 +364,19 @@ class Block {
     this.element.style.maxWidth = "none";
     this.element.style.width = width - 32 + "px";
     this.element.style.height = this.baseRenderedHeight + "px";
+  }
+
+  updateInputParentLayout() {
+    if (!this.parentInput || !this.parent) return;
+
+    const inputParent = this.parent;
+    inputParent.resizeToFitContent();
+    this.intReposition();
+    inputParent.inputVariables.forEach((intBlock) => {
+      intBlock?.intReposition();
+    });
+    inputParent.parent?.updateConnectedSurrounds();
+    inputParent.updateInputParentLayout();
   }
 
   measureIntContentWidth() {
@@ -562,18 +586,29 @@ class Block {
 
   otherAttach(distance, block) {
     if (block.type !== "doubleSurround") return false;
-    console.log(Math.abs(this.y - block.getDoubleSurroundExtraY()));
+    // console.log(Math.abs(this.y - block.getDoubleSurroundExtraY()));
     if (
       Math.abs(this.x - (block.x + 43.5)) < distance &&
       Math.abs(this.y - block.getDoubleSurroundExtraY()) < distance
     ) {
-      console.log("other attach");
       return true;
     } else {
       return false;
     }
   }
 
+  intAttach(distance, input) {
+    if (this.type !== "int") return false;
+    const inputRect = input.getBoundingClientRect();
+    const thisRect = this.element.getBoundingClientRect();
+    if (
+      Math.abs(thisRect.x - inputRect.left) < distance &&
+      Math.abs(thisRect.y - inputRect.top) < distance
+    ) {
+      return true;
+    }
+    return false;
+  }
   static getSelectedBlock() {
     return blocks.find((block) => block.selected);
   }
@@ -655,6 +690,9 @@ class Block {
         this.child?.deleteRipple();
         this.specialChild?.deleteRipple();
         this.otherChild?.deleteRipple();
+        this.inputVariables.forEach((intBlock) => {
+          intBlock?.deleteRipple();
+        });
         const index = blocks.indexOf(this);
 
         this.removeChild();
@@ -681,6 +719,11 @@ class Block {
     if (!this.parent) return;
 
     const oldParent = this.parent;
+
+    if (this.parentInput) {
+      oldParent.removeIntVar(this.parentInput, this);
+      return;
+    }
 
     if (this.parent.child === this) {
       this.parent.child = null;
@@ -762,6 +805,55 @@ class Block {
     this.updateSurroundHeight();
   }
 
+  setIntVar(input, intBlock) {
+    const inputIndex = this.inputs.indexOf(input);
+    if (inputIndex === -1) return;
+
+    if (
+      this.inputVariables[inputIndex] &&
+      this.inputVariables[inputIndex] !== intBlock
+    ) {
+      this.inputVariables[inputIndex].parent = null;
+      this.inputVariables[inputIndex].parentInput = null;
+    }
+
+    intBlock.removeParent();
+    intBlock.parentInput = input;
+    intBlock.parent = this;
+    this.inputVariables[inputIndex] = intBlock;
+
+    this.resizeToFitContent();
+    intBlock.intReposition();
+    this.parent?.resizeToFitContent();
+    this.parent?.updateConnectedSurrounds();
+  }
+
+  removeIntVar(input, intBlock) {
+    if (intBlock.parent !== this) return;
+
+    const inputIndex = this.inputs.indexOf(input);
+    if (inputIndex !== -1 && this.inputVariables[inputIndex] === intBlock) {
+      this.inputVariables[inputIndex] = null;
+    }
+
+    input.style.width = "";
+    intBlock.parent = null;
+    intBlock.parentInput = null;
+    this.resizeToFitContent();
+    this.parent?.resizeToFitContent();
+    this.parent?.updateConnectedSurrounds();
+  }
+
+  static getInputIndex(intBlock) {
+    if (!intBlock.parentInput) return;
+    return intBlock.parent.inputVariables.indexOf(intBlock);
+  }
+
+  static inputTaken(input) {
+    if (blocks.find((block) => block.parentInput === input)) return true;
+    return false;
+  }
+
   updateConnectedSurrounds() {
     let block = this;
 
@@ -801,6 +893,9 @@ class Block {
     this.child?.repostion(this);
     this.specialChild?.specialReposition();
     this.otherChild?.otherReposition();
+    this.inputVariables.forEach((intBlock) => {
+      intBlock?.intReposition();
+    });
   }
 
   specialReposition() {
@@ -828,6 +923,9 @@ class Block {
     this.child?.repostion(this);
     this.specialChild?.specialReposition();
     this.otherChild?.otherReposition();
+    this.inputVariables.forEach((intBlock) => {
+      intBlock?.intReposition();
+    });
   }
 
   otherReposition() {
@@ -840,6 +938,30 @@ class Block {
     this.child?.repostion(this);
     this.specialChild?.specialReposition();
     this.otherChild?.otherReposition();
+    this.inputVariables.forEach((intBlock) => {
+      intBlock?.intReposition();
+    });
+  }
+  intReposition() {
+    this.bringToFront();
+    if (!this.parent || !this.parentInput) return;
+
+    const thisRect = this.element.getBoundingClientRect();
+    const inputRect = this.parentInput.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+
+    this.x = inputRect.left - canvasRect.left - 4;
+    this.y =
+      inputRect.top -
+      canvasRect.top +
+      (inputRect.height - thisRect.height) / 2 -
+      3;
+    this.element.style.left = this.x + "px";
+    this.element.style.top = this.y + "px";
+
+    this.inputVariables.forEach((intBlock) => {
+      intBlock?.intReposition();
+    });
   }
 
   applyToAllChildren(func) {
@@ -953,6 +1075,7 @@ class Block {
 
       input.addEventListener("input", () => {
         this.resizeToFitContent();
+        this.updateInputParentLayout();
       });
     });
 
@@ -1142,9 +1265,14 @@ class Block {
       }
 
       // WORKSPACE BLOCKS
-      if (!this.child && !this.specialChild) {
-        this.bringToFront();
-      }
+
+      this.bringToFront();
+      this.child?.bringToFront();
+      this.specialChild?.bringToFront();
+      this.otherChild?.bringToFront();
+      this.inputVariables.forEach((intBlock) => {
+        intBlock?.bringToFront();
+      });
 
       this.isDragging = true;
       this.element.style.cursor = "grabbing";
@@ -1168,6 +1296,9 @@ class Block {
         this.child?.repostion(this);
         this.specialChild?.specialReposition();
         this.otherChild?.otherReposition();
+        this.inputVariables.forEach((intBlock) => {
+          intBlock?.intReposition();
+        });
       });
     }
 
@@ -1255,9 +1386,7 @@ class Block {
               this.element.style.left = this.x + "px";
               this.element.style.top = this.y + "px";
               block.setSpecialChild(this);
-              console.log("snapped");
             } else if (block.type === "doubleSurround") {
-              console.log("specialAttach: attaching to double surround block");
               this.x = block.x + 43.5;
               this.y =
                 block.y +
@@ -1267,13 +1396,26 @@ class Block {
               this.element.style.left = this.x + "px";
               this.element.style.top = this.y + "px";
               block.setSpecialChild(this);
-              console.log("snapped");
             }
           }
         });
       }
+      if (this.type === "int") {
+        blocks.forEach((block) => {
+          block.inputs.forEach((input) => {
+            if (this.intAttach(15, input) && block !== this) {
+              block.setIntVar(input, this);
+            } else {
+              if (this.parent === block && this.parentInput === input) {
+                block.removeIntVar(input, this);
+              }
+            }
+          });
+        });
+      }
       this.child?.repostion(this);
       this.specialChild?.specialReposition();
+      this.otherChild?.otherReposition();
     });
     return block;
   }
