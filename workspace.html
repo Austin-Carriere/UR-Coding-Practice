@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en-Us">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="styles/styles.css" />
+    <link rel="icon" href="images/urban-rescue-logo.png" />
+    <title>Urban Rescue Code Challenge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Passero+One&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+      rel="stylesheet"
+    />
+    <script defer src="scripts/app.js"></script>
+  </head>
+  <body>
+    <header class="header">
+      <a href="index.html"><img
+        height="70px"
+        src="images/urban-rescue-logo.png"
+        alt="Urban Rescue Logo"
+        href="index.html"
+      /></a>
+      
+    </header>
+    <div class="app">
+      <div class="codespace">
+        <p class="ToolBox">ToolBox</p>
+        <div class="codeBank">
+          <div id="codesections" class="codesections">
+            <button id="MovementSectionbutton" class="codesectionbutton">
+              <img alt="car icon" src="images/Car Icon (Yellow).png" />
+              <br />
+              Movement
+            </button>
+            <button id="LogicSectionbutton" class="codesectionbutton">
+              <img src="images/Logic Icon (Blue).png" />
+              <br />
+              Logic
+            </button>
+            <button id="OperatorsSectionbutton" class="codesectionbutton">
+              <img src="images/Operators Icon (Red).png" />
+              <br />
+              Operators
+            </button>
+            <button id="LoopsSectionbutton" class="codesectionbutton">
+              <img src="images/Loops Icon (Green).png" />
+              <br />
+              Loops
+            </button>
+            <button id="SensorsSectionbutton" class="codesectionbutton">
+              <img
+                width="36x"
+                src="images/Sensor Icon (Pink).png"
+                alt="Sensor Icon"
+              />
+              <br />
+              Sensors
+            </button>
+          </div>
+          <div id="blockBank" class="blockBank">
+            <div id="blockBankTitle">TITLE</div>
+            <div id="blockBankContent" class="blockBankContent"></div>
+          </div>
+        </div>
+      </div>
+      <div class="main">
+        <div id="canvas" class="canvas">
+          <p></p>
+        </div>
+      </div>
+      <div class="sidePanel">
+        <div class= "panelContainer" id = "panelContainer">
+          <button class="panelButton" id="panelButton">
+            <img draggable="false" class="arrowPopup" id="panelArrow" src="images/Arrow.svg">
+          </button>
+          <div class="panel">
+          <canvas id = "canvas" class="canvasPopup"></canvas>
+        </div>
+         
+      </div>
+    </div>
+
+    <template class="blockTemplate" id="blockTemplate">
+      <div class="block">
+        <?xml version="1.0" encoding="UTF-8"?>
+        <svg
+          id="Base-Code-Shape"
+          class="blockSvg"
+          data-name="Layer 1"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 325 95.31"
+        >
+          <path
+            d="M305,2H82.4v6.51l-23.4,13.51-23.4-13.51V2h-15.6C10.06,2,2,10.06,2,20v36c0,9.94,8.06,18,18,18h15.6v6.51l23.4,13.51,23.4-13.51v-6.51h222.6c9.94,0,18-8.06,18-18V20c0-9.94-8.06-18-18-18Z"
+            fill="#fbb040"
+            stroke="#ffffff"
+            stroke-miterlimit="10"
+            stroke-width="2"
+            id="pathObject"
+          />
+          <foreignObject
+            x="2%"
+            y="20%"
+            width="95%"
+            height="55%"
+            style="
+              text-align: left;
+              padding-left: 5%;
+              white-space: nowrap;
+              padding-top: 2px;
+            "
+          >
+            <div id="title1" class="title">Move</div>
+            <select class="blockSelectionBox" id="blockSelectionBox"></select>
+            <input
+              class="blockInput"
+              type="number"
+              min="0"
+              xmlns="http://w3.org"
+            />
+            <div id="title2" class="title">inches</div>
+            <style>
+              * {
+                user-select: none;
+              }
+              .title {
+                display: inline;
+                margin: 3px 0px;
+                padding: 3px 0px;
+                width: 40%;
+                display: inline;
+                font-size: 24px;
+                color: rgb(0, 0, 0);
+                font-weight: 500;
+                font-family: "Elms Sans", sans-serif;
+              }
+              .blockSelectionBox {
+                display: inline;
+                field-sizing: content;
+                min-height: 25px;
+                border: none;
+                border-radius: 5px;
+                display: inline;
+                font-size: 22px;
+                color: rgb(0, 0, 0);
+                font-weight: 500;
+                font-family: "Elms Sans", sans-serif;
+              }
+              .blockSelectionBox:focus {
+                outline: none;
+              }
+              .blockInput {
+                min-width: 6px;
+                margin: 0;
+                display: inline;
+                field-sizing: content;
+                border: 2px solid rgb(0, 0, 0);
+                border-radius: 15px;
+                font-weight: 600;
+                padding: 2px;
+                min-height: 20px;
+                min-width: 24px;
+                font-size: 20px;
+                font-family: "Elms Sans", sans-serif;
+                text-align: center;
+              }
+              input::-webkit-outer-spin-button,
+              input::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+              }
+              .blockInput:focus {
+                box-shadow: 2px 2px 8px #181a2a89;
+                outline: none;
+              }
+
+              .blockInput:out-of-range {
+                box-shadow: 2px 2px 8px red;
+                border-color: red;
+              }
+            </style>
+          </foreignObject>
+        </svg>
+      </div>
+    </template>
+
+    <template class="surrondBlock" id="surrondBlock">
+      <div class="block">
+        <?xml version="1.0" encoding="UTF-8"?>
+        <svg
+          id="Base-Code-Shape"
+          class="blockSvg"
+          data-name="Layer 1"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="-2 -2 327.42 197.4312"
+        >
+          <path
+            d="M302.65,0H80.64l.06,7.11-23.26,13.68-23.48-13.3-.06-7.48h-15.55C8.21,0,0,8.21,0,18.35v135.06c0,11.05,8.95,20,20,20h14.01l.06,6.84,23.48,13.3,23.26-13.68-.05-6.47h232.36v-30.52h-155.46v7.64l-23.37,13.49-23.37-13.49v-7.64h-47.98l-5.72-3.24v-67.65h53.75l.05,6.48,23.48,13.3,23.26-13.68-.05-6.1h144.94c10.13,0,18.35-8.21,18.35-18.35V18.35c0-10.13-8.21-18.35-18.35-18.35Z"
+            fill="#75cbf2"
+            stroke-miterlimit="10"
+            stroke-width="2"
+            id="pathObject"
+          />
+          <foreignObject
+            x="7px"
+            y="14px"
+            width="95%"
+            height="55%"
+            style="
+              text-align: left;
+              padding-left: 5%;
+              padding-top: 3%;
+              white-space: nowrap;
+            "
+          >
+            <div class="title" id="title1">Title 1</div>
+            <input
+              class="blockInput"
+              type="number"
+              min="0"
+              xmlns="http://w3.org"
+            />
+            <div class="title" id="title2">Title2</div>
+            <style>
+              * {
+                user-select: none;
+              }
+              .intacceptor {
+                background: white;
+                display: inline-block;
+                border: 2px solid black;
+                border-radius: 15px;
+                height: 30px;
+                width: 75px;
+                margin-bottom: -9px;
+                margin-left: 5px;
+              }
+              .title {
+                display: inline;
+                margin: 3px 0px;
+                padding: 3px 0px;
+                width: 40%;
+                display: inline;
+                font-size: 24px;
+                color: rgb(0, 0, 0);
+                font-weight: 500;
+                font-family: "Elms Sans", sans-serif;
+              }
+
+              .blockInput {
+                min-width: 6px;
+                margin: auto;
+                display: inline;
+                field-sizing: content;
+                border: 2px solid rgb(0, 0, 0);
+                border-radius: 15px;
+                font-family: sans-serif;
+                font-weight: 600;
+                padding: 2px;
+                min-height: 20%;
+                min-width: 14px;
+                font-size: 20px;
+                font-family: "Elms Sans", sans-serif;
+                text-align: center;
+              }
+              input::-webkit-outer-spin-button,
+              input::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+              }
+              .blockInput:focus {
+                box-shadow: 2px 2px 8px #181a2a89;
+                outline: none;
+              }
+
+              .blockInput:out-of-range {
+                box-shadow: 2px 2px 8px red;
+                border-color: red;
+              }
+            </style>
+          </foreignObject>
+        </svg>
+      </div>
+    </template>
+
+    <template class="doubleSurrondBlock" id="doubleSurrondBlock">
+      <div class="block">
+        <?xml version="1.0" encoding="UTF-8"?>
+        <svg
+          id="Base-Code-Shape"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="-2 -2 323.21 322.89"
+          class="blockSvg"
+        >
+          <path
+            d="M321.21,53.61l-.09-35.3C321.1,8.17,312.86-.02,302.73,0L80.72.54l.07,7.11-23.23,13.74-23.51-13.25-.08-7.48-15.55.04C8.29.71.1,8.95.12,19.08l.07,27.3h-.19v234.52c0,11.05,8.95,20,20,20h13.96v6.49l23.37,13.49,23.37-13.49v-6.15h221.58c5.52,0,10-4.48,10-10v-10.52c0-5.52-4.48-10-10-10h-145.46v7.64l-23.37,13.49-23.37-13.49v-7.64h-46.15l-6.6-3.81-.11.06v-66.03h53.51v5.32l23.39,13.49,23.39-13.49v-5.32h145.42c5.52,0,10-4.48,10-10v-17.21h.18v-20.52c0-5.52-4.48-10-10-10h-145.46v7.64l-23.37,13.49-23.37-13.49v-7.64h-47.46l-6.24-3.6v-67.02l54.01-.13.07,6.48,23.51,13.25,23.23-13.74-.06-6.1,144.94-.35c10.13-.02,18.33-8.26,18.3-18.39Z"
+            fill="#75cbf2"
+            stroke-width="2"
+            id="pathObject"
+          />
+          <foreignObject width="100%" height="100%" x="25px" y="25px">
+            <div class="title" id="title1">If</div>
+            <div class="intacceptor" id="intacceptor"></div>
+            <div class="title" id="title2">Else</div>
+            <style>
+              * {
+                user-select: none;
+              }
+              .intacceptor {
+                background: white;
+                display: inline-block;
+                border: 2px solid black;
+                border-radius: 15px;
+                height: 30px;
+                width: 75px;
+                margin-bottom: -9px;
+                margin-left: 5px;
+              }
+              .title {
+                display: inline;
+                margin: 3px 0px;
+                padding: 3px 4px;
+                width: 40%;
+                display: inline;
+                font-size: 24px;
+                color: rgb(0, 0, 0);
+                font-weight: 500;
+                font-family: "Elms Sans", sans-serif;
+              }
+
+              #title2 {
+                display: block;
+                transform: translate(0px, 94px);
+              }
+
+              .blockInput {
+                min-width: 6px;
+                margin: auto;
+                display: inline;
+                field-sizing: content;
+                border: 2px solid rgb(0, 0, 0);
+                border-radius: 9px;
+                font-family: sans-serif;
+                font-weight: 600;
+                padding: 2px;
+                min-height: 20%;
+                min-width: 14px;
+                font-size: 20px;
+                font-family: "Elms Sans", sans-serif;
+                text-align: center;
+              }
+              input::-webkit-outer-spin-button,
+              input::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+              }
+              .blockInput:focus {
+                box-shadow: 2px 2px 8px #181a2a89;
+                outline: none;
+              }
+
+              .blockInput:out-of-range {
+                box-shadow: 2px 2px 8px red;
+                border-color: red;
+              }
+            </style>
+          </foreignObject>
+        </svg>
+      </div>
+    </template>
+
+    <template class="startBlock" id="startBlock">
+      <div class="block">
+        <?xml version="1.0" encoding="UTF-8"?>
+        <svg
+          id="Base-Code-Shape"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="-2 -2 325.84 108.65"
+          class="blockSvg"
+        >
+          <path
+            d="M223.84,0H50C22.39,0,0,22.39,0,50v21.48c0,6.63,5.37,12,12,12h21.71l.03,6.63,23.71,13.55,23.58-13.76-.03-6.42h180.84c6.63,0,12-5.37,12-12v-21.48c0-27.61-22.39-50-50-50Z"
+            fill="#fbb040"
+            stroke-width="2"
+            id="pathObject"
+          />
+          <foreignObject height="40%" width="100%" x="20" y="25px">
+            <div class="title">On play</div>
+            <style>
+              .title {
+                display: inline;
+                margin: 3px 0px;
+                padding: 3px 0px;
+                width: 40%;
+                display: inline;
+                font-size: 28px;
+                color: rgb(0, 0, 0);
+                font-weight: 550;
+                font-family: "Elms Sans", sans-serif;
+              }
+            </style>
+          </foreignObject>
+        </svg>
+      </div>
+    </template>
+
+    <template class="intBlock" id="intBlock">
+      <div class="block">
+        <?xml version="1.0" encoding="UTF-8"?>
+        <svg
+          class="blockSvg"
+          id="Base-Code-Shape"
+          data-name="Layer 1"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 120 46"
+          preserveAspectRatio="xMinYMid meet"
+        >
+          <rect
+            x="1"
+            y="1"
+            width="118"
+            height="44"
+            rx="20"
+            ry="20"
+            fill="#ef4136"
+            id="pathObject"
+            stroke-miterlimit="10"
+            stroke-width="2"
+          />
+          <foreignObject
+            height="36"
+            width="100%"
+            y="5"
+            style="overflow: visible;"
+          >
+            <div class="intBlockContent">
+              <input type="number" class="blockInput" id="input1" />
+              <div class="title" id="title1">/</div>
+              <input type="number" class="blockInput" id="input2" />
+            </div>
+            <style>
+              * {
+                user-select: none;
+              }
+              .intBlockContent {
+                align-items: center;
+                box-sizing: border-box;
+                display: flex;
+                gap: 3px;
+                height: 36px;
+                justify-content: center;
+                overflow: visible;
+                padding: 0 2px;
+                white-space: nowrap;
+              }
+              .title {
+                display: inline-block;
+                flex: 0 0 14px;
+                font-size: 22px;
+                font-weight: 600;
+                line-height: 26px;
+                text-align: center;
+              }
+              .blockInput {
+                appearance: textfield;
+                border: 2px solid rgb(0, 0, 0);
+                border-radius: 10px;
+                box-sizing: border-box;
+                display: inline-block;
+                field-sizing: content;
+                flex: 0 0 auto;
+                font-family: "Elms Sans", sans-serif;
+                font-size: 17px;
+                font-weight: 600;
+                height: 24px;
+                line-height: 18px;
+                min-width: 20px;
+                padding: 1px 7px;
+                text-align: center;
+              }
+              input::-webkit-outer-spin-button,
+              input::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+              }
+              .blockInput:focus {
+                box-shadow: 2px 2px 8px #181a2a89;
+                outline: none;
+              }
+
+              .blockInput:out-of-range {
+                box-shadow: 2px 2px 8px red;
+                border-color: red;
+              }
+            </style>
+          </foreignObject>
+        </svg>
+      </div>
+    </template>
+  </body>
+</html>
