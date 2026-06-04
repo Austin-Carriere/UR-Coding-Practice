@@ -247,7 +247,7 @@ class Block {
 
   resizeToFitContent() {
     if (!this.foreignObject || !this.pathObject) return;
-
+    console.log("resizing", this.text);
     this.resizeInputToFitContent();
 
     const svgRect = this.element.getBoundingClientRect();
@@ -314,11 +314,20 @@ class Block {
       } else {
         input.style.width = this.measureInputWidth(input) + "px";
       }
+
+      this.parent?.resizeToFitContent();
     });
   }
 
   getInputBlockSocketWidth(intBlock) {
-    return intBlock.element.getBoundingClientRect().width * 1.66;
+    const socketRect = intBlock.pathObject?.getBoundingClientRect();
+    const viewBoxWidth =
+      this.element.viewBox?.baseVal?.width || this.baseViewBoxWidth;
+    const parentScale = viewBoxWidth
+      ? this.element.getBoundingClientRect().width / viewBoxWidth
+      : this.renderScale;
+
+    return (socketRect.width + 8) / (parentScale || 1);
   }
 
   measureInputWidth(input) {
@@ -352,9 +361,15 @@ class Block {
     );
   }
 
-  resizeIntPath(expandedWidth = this.baseViewBoxWidth) {
+  resizeIntPath() {
     const contentWidth = this.measureIntContentWidth();
-    const width = Math.max(this.baseViewBoxWidth, expandedWidth, contentWidth);
+    console.log(
+      "baseViewBoxWidth",
+      this.baseViewBoxWidth,
+      "contentWidth",
+      contentWidth,
+    );
+    const width = Math.max(this.baseViewBoxWidth, contentWidth);
     const rect = this.element.querySelector("rect");
     this.element.setAttribute("viewBox", `0 0 ${contentWidth + 36} 46`);
     rect.setAttribute("width", contentWidth + 36);
@@ -362,7 +377,7 @@ class Block {
     this.foreignObject.setAttribute("height", "46");
     this.foreignObject.setAttribute("y", "5");
     this.element.style.maxWidth = "none";
-    this.element.style.width = width - 32 + "px";
+    this.element.style.width = Math.pow(contentWidth, 0.93) + 8 + "px";
     this.element.style.height = this.baseRenderedHeight + "px";
   }
 
@@ -377,6 +392,15 @@ class Block {
     });
     inputParent.parent?.updateConnectedSurrounds();
     inputParent.updateInputParentLayout();
+  }
+
+  updateAttachedIntLayout() {
+    this.resizeToFitContent();
+    this.inputVariables.forEach((intBlock) => {
+      intBlock?.intReposition();
+    });
+    this.updateInputParentLayout();
+    this.parent?.updateConnectedSurrounds();
   }
 
   measureIntContentWidth() {
@@ -822,10 +846,7 @@ class Block {
     intBlock.parent = this;
     this.inputVariables[inputIndex] = intBlock;
 
-    this.resizeToFitContent();
-    intBlock.intReposition();
-    this.parent?.resizeToFitContent();
-    this.parent?.updateConnectedSurrounds();
+    this.updateAttachedIntLayout();
   }
 
   removeIntVar(input, intBlock) {
@@ -839,9 +860,7 @@ class Block {
     input.style.width = "";
     intBlock.parent = null;
     intBlock.parentInput = null;
-    this.resizeToFitContent();
-    this.parent?.resizeToFitContent();
-    this.parent?.updateConnectedSurrounds();
+    this.updateAttachedIntLayout();
   }
 
   static getInputIndex(intBlock) {
@@ -955,7 +974,7 @@ class Block {
       inputRect.top -
       canvasRect.top +
       (inputRect.height - thisRect.height) / 2 -
-      3;
+      3.4; //keep this offset
     this.element.style.left = this.x + "px";
     this.element.style.top = this.y + "px";
 
@@ -1074,6 +1093,7 @@ class Block {
       });
 
       input.addEventListener("input", () => {
+        console.log("input");
         this.resizeToFitContent();
         this.updateInputParentLayout();
       });
