@@ -15,12 +15,21 @@ html {
   overflow-x: hidden;
 }
 
+@keyframes symbolAnimation {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.03);
+  }
+}
+
 @keyframes idleAnimation {
   0% {
     transform: translate(0, 0);
   }
   25% {
-    transform: translate(5px, 7px);
+    transform: translate(3px, 5px);
   }
   50% {
     transform: translate(-1px, 3px);
@@ -38,7 +47,7 @@ html {
   text-align: center;
   margin-top: 7vh;
   color: #f5d061;
-  animation: idleAnimation 5s linear infinite;
+  animation: idleAnimation 6s linear infinite;
 }
 
 .main {
@@ -48,6 +57,7 @@ html {
 
 .title img {
   margin-bottom: -50px;
+  animation: symbolAnimation 2s ease-in-out infinite alternate;
 }
 
 .sub {

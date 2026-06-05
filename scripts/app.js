@@ -327,7 +327,7 @@ class Block {
       ? this.element.getBoundingClientRect().width / viewBoxWidth
       : this.renderScale;
 
-    return (socketRect.width + 8) / (parentScale || 1);
+    return socketRect.width / (parentScale || 1);
   }
 
   measureInputWidth(input) {
@@ -377,7 +377,7 @@ class Block {
     this.foreignObject.setAttribute("height", "46");
     this.foreignObject.setAttribute("y", "5");
     this.element.style.maxWidth = "none";
-    this.element.style.width = Math.pow(contentWidth, 0.93) + 8 + "px";
+    this.element.style.width = Math.pow(contentWidth, 0.919) + 12 + "px";
     this.element.style.height = this.baseRenderedHeight + "px";
   }
 
@@ -458,6 +458,7 @@ class Block {
       "d",
       `M${topRightStart},0H80.64l.06,7.11-23.26,13.68-23.48-13.3-.06-7.48h-15.55C8.21,0,0,8.21,0,18.35v${135.06 + extraHeight}c0,11.05,8.95,20,20,20h14.01l.06,6.84,23.48,13.3,23.26-13.68-.05-6.47H${bottomRightEdge}v-30.52H157.66v7.64l-23.37,13.49-23.37-13.49v-7.64h-47.98l-5.72-3.24v-${67.65 + extraHeight}h53.75l.05,6.48,23.48,13.3,23.26-13.68-.05-6.1h${topBridgeLength}c10.13,0,18.35-8.21,18.35-18.35V18.35c0-10.13-8.21-18.35-18.35-18.35Z`,
     );
+    this.foreignObject.setAttribute("width", expandedWidth);
   }
 
   resizeDoubleSurroundPath(extraHeight, otherExtraHeight = 0) {
@@ -969,7 +970,7 @@ class Block {
     const inputRect = this.parentInput.getBoundingClientRect();
     const canvasRect = canvas.getBoundingClientRect();
 
-    this.x = inputRect.left - canvasRect.left - 4;
+    this.x = inputRect.left - canvasRect.left - 3.5;
     this.y =
       inputRect.top -
       canvasRect.top +
