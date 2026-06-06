@@ -247,7 +247,6 @@ class Block {
 
   resizeToFitContent() {
     if (!this.foreignObject || !this.pathObject) return;
-    console.log("resizing", this.text);
     this.resizeInputToFitContent();
 
     const svgRect = this.element.getBoundingClientRect();
@@ -363,12 +362,6 @@ class Block {
 
   resizeIntPath() {
     const contentWidth = this.measureIntContentWidth();
-    console.log(
-      "baseViewBoxWidth",
-      this.baseViewBoxWidth,
-      "contentWidth",
-      contentWidth,
-    );
     const width = Math.max(this.baseViewBoxWidth, contentWidth);
     const rect = this.element.querySelector("rect");
     this.element.setAttribute("viewBox", `0 0 ${contentWidth + 36} 46`);
@@ -537,7 +530,7 @@ class Block {
     this.applySurroundSize();
     this.specialChild?.specialReposition();
     this.otherChild?.otherReposition();
-    this.child?.repostion(this);
+    this.child?.reposition(this);
     this.parent?.updateConnectedSurrounds();
   }
 
@@ -886,7 +879,7 @@ class Block {
     }
   }
 
-  repostion(parent) {
+  reposition(parent) {
     this.bringToFront();
     if (parent && parent.type === "basic") {
       this.x = parent.x;
@@ -910,7 +903,7 @@ class Block {
       this.element.style.top = this.y + "px";
     }
 
-    this.child?.repostion(this);
+    this.child?.reposition(this);
     this.specialChild?.specialReposition();
     this.otherChild?.otherReposition();
     this.inputVariables.forEach((intBlock) => {
@@ -940,7 +933,7 @@ class Block {
       this.element.style.left = this.x + "px";
       this.element.style.top = this.y + "px";
     }
-    this.child?.repostion(this);
+    this.child?.reposition(this);
     this.specialChild?.specialReposition();
     this.otherChild?.otherReposition();
     this.inputVariables.forEach((intBlock) => {
@@ -955,7 +948,7 @@ class Block {
     this.y = this.parent.getDoubleSurroundExtraY();
     this.element.style.left = this.x + "px";
     this.element.style.top = this.y + "px";
-    this.child?.repostion(this);
+    this.child?.reposition(this);
     this.specialChild?.specialReposition();
     this.otherChild?.otherReposition();
     this.inputVariables.forEach((intBlock) => {
@@ -1072,11 +1065,9 @@ class Block {
     const inputs = Array.from(block.querySelectorAll(".blockInput"));
     const input = inputs[0] || null;
     const selectionBox = block.querySelector(".blockSelectionBox");
-    const intAcceptor = block.querySelector(".intacceptor");
     this.inputs = inputs;
     this.input = input;
     this.selectionBox = selectionBox;
-    this.intAcceptor = intAcceptor;
 
     if (selectionBox) {
       selectionBox.addEventListener("mousedown", (event) => {
@@ -1096,6 +1087,9 @@ class Block {
       input.addEventListener("input", () => {
         console.log("input");
         this.resizeToFitContent();
+        this.inputVariables.forEach((intBlock) => {
+          intBlock?.intReposition();
+        });
         this.updateInputParentLayout();
       });
     });
@@ -1126,10 +1120,6 @@ class Block {
       inputs.forEach((input) => {
         input.style.display = "none";
       });
-    }
-
-    if (intAcceptor && this.acceptor !== 1) {
-      intAcceptor.style.display = "none";
     }
 
     //----------------------------------Position-----------------------------
@@ -1288,11 +1278,11 @@ class Block {
       // WORKSPACE BLOCKS
 
       this.bringToFront();
-      this.child?.bringToFront();
-      this.specialChild?.bringToFront();
-      this.otherChild?.bringToFront();
+      this.child?.reposition(this);
+      this.specialChild?.specialReposition();
+      this.otherChild?.otherReposition();
       this.inputVariables.forEach((intBlock) => {
-        intBlock?.bringToFront();
+        intBlock?.intReposition();
       });
 
       this.isDragging = true;
@@ -1314,7 +1304,7 @@ class Block {
 
         block.style.left = this.x + "px";
         block.style.top = this.y + "px";
-        this.child?.repostion(this);
+        this.child?.reposition(this);
         this.specialChild?.specialReposition();
         this.otherChild?.otherReposition();
         this.inputVariables.forEach((intBlock) => {
@@ -1343,47 +1333,24 @@ class Block {
             block.otherChild === null
           ) {
             block.setOtherChild(this);
-            this.x = block.x + 43.5;
-            this.y = block.getDoubleSurroundExtraY();
-            this.element.style.left = this.x + "px";
-            this.element.style.top = this.y + "px";
+            this.otherReposition();
           }
           if (
             this.attachProximity(15, block) &&
             block !== this &&
             block.child === null
           ) {
-            console.log("snapped");
             if (block.type === "basic") {
-              this.x = block.x;
-              this.y =
-                block.y + block.element.getBoundingClientRect().height - 13;
-              this.element.style.left = this.x + "px";
-              this.element.style.top = this.y + "px";
-              this.bringToFront();
+              this.reposition(block);
               block.setChild(this);
             } else if (block.type === "surround") {
-              this.x = block.x;
-              this.y =
-                block.y + block.element.getBoundingClientRect().height - 13;
-              this.element.style.left = this.x + "px";
-              this.element.style.top = this.y + "px";
-              this.bringToFront();
+              this.reposition(block);
               block.setChild(this);
             } else if (block.type === "doubleSurround") {
-              this.x = block.x;
-              this.y =
-                block.y + block.element.getBoundingClientRect().height - 13;
-              this.element.style.left = this.x + "px";
-              this.element.style.top = this.y + "px";
-              this.bringToFront();
+              this.reposition(block);
               block.setChild(this);
             } else if (block.type === "startBlock") {
-              this.x = block.x * 1;
-              this.y =
-                block.y + block.element.getBoundingClientRect().height - 14;
-              this.element.style.left = this.x + "px";
-              this.element.style.top = this.y + "px";
+              this.reposition(block);
               this.bringToFront();
               block.setChild(this);
             }
@@ -1398,25 +1365,11 @@ class Block {
             block.specialChild === null
           ) {
             if (block.type === "surround") {
-              this.x = block.x + 44;
-              this.y =
-                block.y +
-                (block.baseRenderedHeight ||
-                  block.element.getBoundingClientRect().height) -
-                69;
-              this.element.style.left = this.x + "px";
-              this.element.style.top = this.y + "px";
               block.setSpecialChild(this);
+              this.specialReposition();
             } else if (block.type === "doubleSurround") {
-              this.x = block.x + 43.5;
-              this.y =
-                block.y +
-                (block.baseRenderedHeight ||
-                  block.element.getBoundingClientRect().height) -
-                140;
-              this.element.style.left = this.x + "px";
-              this.element.style.top = this.y + "px";
               block.setSpecialChild(this);
+              this.specialReposition();
             }
           }
         });
@@ -1434,7 +1387,7 @@ class Block {
           });
         });
       }
-      this.child?.repostion(this);
+      this.child?.reposition(this);
       this.specialChild?.specialReposition();
       this.otherChild?.otherReposition();
     });
@@ -1595,7 +1548,6 @@ const panelArrow = document.getElementById("panelArrow");
 let panelActive = false;
 
 pannelButton.addEventListener("click", () => {
-  console.log("clicked");
   if (panelActive) {
     panelContainer.classList.remove("active");
     panelArrow.classList.remove("active");
