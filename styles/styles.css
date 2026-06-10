@@ -326,13 +326,15 @@ body {
   width: 70px;
 }
 
+.blockSvg--bool {
+  max-width: 90px;
+  min-width: 90px;
+  width: 90px;
+}
+
 .blockSvg * {
   user-select: none;
   -webkit-user-select: none;
-}
-
-.block:hover {
-  transform: scale(1.04);
 }
 
 .blockBankContent::-webkit-scrollbar {

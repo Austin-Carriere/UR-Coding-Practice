@@ -203,6 +203,8 @@ class Block {
     this.otherChild = null; // the child of the extra surround in double surround
     this.section = section;
     this.inputVariables = []; // for int blocks, store the connected int blocks for each input
+    this.boolVariables = []; // for bool blocks, store the connected bool blocks for each input
+    this.boolAcceptors = []; // for bool blocks, store the connected bool acceptors for each input
     this.parentInput = null;
 
     this.hasInput = hasInput;
@@ -260,6 +262,12 @@ class Block {
 
     if (this.type === "int") {
       this.resizeIntPath();
+      return;
+    }
+
+    if (this.type === "bool") {
+      this.resizeBoolPath();
+      console.log(this.element.getBoundingClientRect().width);
       return;
     }
 
@@ -374,6 +382,30 @@ class Block {
     this.element.style.height = this.baseRenderedHeight + "px";
   }
 
+  resizeBoolPath() {
+    const contentWidth = this.measureBoolContentWidth();
+    const path = this.pathObject;
+    this.element.setAttribute("viewBox", `-2 -2 ${contentWidth} 79.4`);
+    path.setAttribute(
+      "d",
+      `M245.05,74.55H37.28C22.72,60,14.56,51.83,0,37.28h0C14.56,22.72,22.72,14.56,37.28,0h${contentWidth - 83}c14.56,14.56,22.72,22.72,37.28,37.28h0c-14.56,14.56-22.72,22.72-37.28,37.28Z`,
+    );
+    this.element.querySelector("#boolean2").style.transform =
+      `translate(${contentWidth - 130}px, 17px)`;
+  }
+
+  measureBoolContentWidth() {
+    var contentWidth = 0;
+    contentWidth +=
+      this.element.querySelector("#boolean1").getBoundingClientRect().width *
+      3.9;
+    contentWidth +=
+      this.element.querySelector("#boolean2").getBoundingClientRect().width *
+      3.9;
+    contentWidth += this.title1.getBoundingClientRect().width;
+    return contentWidth;
+  }
+
   updateInputParentLayout() {
     if (!this.parentInput || !this.parent) return;
 
@@ -394,6 +426,21 @@ class Block {
     });
     this.updateInputParentLayout();
     this.parent?.updateConnectedSurrounds();
+  }
+
+  updateAttachedBoolLayout(boolBlock) {
+    this.resizeToFitContent();
+    boolBlock.boolReposition();
+    this.parent?.updateConnectedSurrounds();
+  }
+
+  resizeBoolAccpetor(attachedWidth) {
+    const path = this.pathObject;
+    const newWidth = attachedWidth * 3.9 + 36;
+    path.setAttribute(
+      "d",
+      `M87.62,40.2H20.1C12.25,32.35,7.85,27.95,0,20.1h0C7.85,12.25,12.25,7.85,20.1,0h${newWidth}c7.85,7.85,12.25,12.25,20.1,20.1h0c-7.85,7.85-12.25,12.25-20.1,20.1Z`,
+    );
   }
 
   measureIntContentWidth() {
@@ -627,6 +674,21 @@ class Block {
     }
     return false;
   }
+
+  boolAttach(distance, input) {
+    if (this.type !== "bool") return false;
+    const inputRect = input.getBoundingClientRect();
+    const thisRect = this.element.getBoundingClientRect();
+    if (
+      Math.abs(thisRect.x - inputRect.left) < distance &&
+      Math.abs(thisRect.y - inputRect.top) < distance
+    ) {
+      console.log("bool attach");
+      return true;
+    }
+    return false;
+  }
+
   static getSelectedBlock() {
     return blocks.find((block) => block.selected);
   }
@@ -857,6 +919,45 @@ class Block {
     this.updateAttachedIntLayout();
   }
 
+  setBoolVar(input, boolBlock) {
+    const boolIndex = this.boolAcceptors.indexOf(input);
+    if (boolIndex === -1) return;
+
+    if (
+      this.boolVariables[boolIndex] &&
+      this.boolVariables[boolIndex] !== boolBlock
+    ) {
+      this.boolVariables[boolIndex].parent = null;
+      this.boolVariables[boolIndex].parentInput = null;
+    }
+
+    boolBlock.removeParent();
+    boolBlock.parentInput = input;
+    boolBlock.parent = this;
+    this.boolVariables[boolIndex] = boolBlock;
+    this.updateAttachedBoolLayout(boolBlock);
+
+    const newWidth = boolBlock.element.getBoundingClientRect().width + 30;
+    input.setAttribute(
+      "d",
+      `M87.62,40.2H20.1C12.25,32.35,7.85,27.95,0,20.1h0C7.85,12.25,12.25,7.85,20.1,0h${newWidth}c7.85,7.85,12.25,12.25,20.1,20.1h0c-7.85,7.85-12.25,12.25-20.1,20.1Z`,
+    );
+  }
+
+  removeBoolVar(input, boolBlock) {
+    if (boolBlock.parent !== this) return;
+
+    const boolIndex = this.boolAcceptors.indexOf(input);
+    if (boolIndex !== -1 && this.boolVariables[boolIndex] === boolBlock) {
+      this.boolVariables[boolIndex] = null;
+    }
+
+    input.style.width = "";
+    boolBlock.parent = null;
+    boolBlock.parentInput = null;
+    this.updateAttachedBoolLayout(boolBlock);
+  }
+
   static getInputIndex(intBlock) {
     if (!intBlock.parentInput) return;
     return intBlock.parent.inputVariables.indexOf(intBlock);
@@ -977,6 +1078,26 @@ class Block {
     });
   }
 
+  boolReposition() {
+    this.bringToFront();
+    if (!this.parent || !this.parentInput) return;
+
+    const thisRect = this.element.getBoundingClientRect();
+    const inputRect = this.parentInput.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+    this.x = inputRect.left - canvasRect.left - 5;
+    this.y =
+      inputRect.top -
+      canvasRect.top +
+      (inputRect.height - thisRect.height) / 2 -
+      4.5;
+    this.element.style.left = this.x + "px";
+    this.element.style.top = this.y + "px";
+    this.boolVariables.forEach((boolBlock) => {
+      boolBlock?.boolReposition();
+    });
+  }
+
   applyToAllChildren(func) {
     if (this.child) {
       func(this.child);
@@ -1029,6 +1150,8 @@ class Block {
       template = document.getElementById("startBlock");
     } else if (this.type === "int") {
       template = document.getElementById("intBlock");
+    } else if (this.type === "bool") {
+      template = document.getElementById("boolBlock");
     } else {
       console.error("NO BLOCK TYPE FOUND");
       template = document.getElementById("blockTemplate");
@@ -1041,6 +1164,7 @@ class Block {
 
     const title1 = block.querySelector("#title1");
     const title2 = block.querySelector("#title2");
+    this.title1 = title1;
     this.title2 = title2;
 
     const pathObject = block.querySelector("#pathObject");
@@ -1057,9 +1181,12 @@ class Block {
     } else if (this.type === "int") {
       this.baseViewBoxWidth = 120;
       this.baseViewBoxHeight = 46;
-    } else {
+    } else if (this.type === "basic") {
       this.baseViewBoxWidth = 325;
       this.baseViewBoxHeight = 95.31;
+    } else if (this.type === "bool") {
+      this.baseViewBoxWidth = 285.42;
+      this.baseViewBoxHeight = 80;
     }
 
     const inputs = Array.from(block.querySelectorAll(".blockInput"));
@@ -1068,6 +1195,8 @@ class Block {
     this.inputs = inputs;
     this.input = input;
     this.selectionBox = selectionBox;
+    this.boolSpace = block.querySelector(".boolSpace");
+    this.boolAcceptors = Array.from(block.querySelectorAll("#boolacceptor"));
 
     if (selectionBox) {
       selectionBox.addEventListener("mousedown", (event) => {
@@ -1120,6 +1249,19 @@ class Block {
       inputs.forEach((input) => {
         input.style.display = "none";
       });
+    }
+
+    if (this.acceptor === 1) {
+      block.querySelectorAll(".blockInput").forEach((input) => {
+        input.style.display = "none";
+      });
+    } else {
+      if (this.boolSpace) {
+        this.boolSpace.style.display = "none";
+        this.boolAcceptors.forEach((boolAcceptor) => {
+          boolAcceptor.style.display = "none";
+        });
+      }
     }
 
     //----------------------------------Position-----------------------------
@@ -1284,6 +1426,9 @@ class Block {
       this.inputVariables.forEach((intBlock) => {
         intBlock?.intReposition();
       });
+      this.boolVariables.forEach((boolVar) => {
+        boolVar?.boolReposition();
+      });
 
       this.isDragging = true;
       this.element.style.cursor = "grabbing";
@@ -1310,6 +1455,9 @@ class Block {
         this.inputVariables.forEach((intBlock) => {
           intBlock?.intReposition();
         });
+        this.boolVariables.forEach((boolVar) => {
+          boolVar?.boolReposition();
+        });
       });
     }
 
@@ -1327,6 +1475,7 @@ class Block {
       ) {
         //So child blocks don't snap to other blocks when they are already snapped to a block
         blocks.forEach((block) => {
+          if (this.type === "int" || this.type === "bool") return;
           if (
             this.otherAttach(20, block) &&
             block !== this &&
@@ -1387,6 +1536,19 @@ class Block {
           });
         });
       }
+      if (this.type === "bool") {
+        blocks.forEach((block) => {
+          block.boolAcceptors.forEach((boolAcceptor) => {
+            if (this.boolAttach(15, boolAcceptor) && block !== this) {
+              block.setBoolVar(boolAcceptor, this);
+            } else {
+              if (this.parent === block && this.parentInput === boolAcceptor) {
+                block.removeBoolVar(boolAcceptor, this);
+              }
+            }
+          });
+        });
+      }
       this.child?.reposition(this);
       this.specialChild?.specialReposition();
       this.otherChild?.otherReposition();
@@ -1396,6 +1558,14 @@ class Block {
 
   render(parent) {
     parent.appendChild(this.element);
+
+    if (this.acceptor === 1 && this.boolAcceptors.length === 1) {
+      console.log(this.title1.getBoundingClientRect().width);
+      this.boolAcceptors[0].style.transform =
+        "translate(" +
+        (this.title1.getBoundingClientRect().width * 4 + 30) +
+        "px, 17px)";
+    }
 
     if (this.isTemplate) {
       this.element.style.width = "";
@@ -1464,7 +1634,7 @@ document.addEventListener("keydown", (event) => {
 
 // Block Format: new Block(TEXT (use / to separate title 1 and title 2), SECTION, Selectionbox?, NumericalInput?,
 //  X, Y, Template? (always true), OPTIONS (MAP), TYPE, ACCEPTOR);
-// Just put 0, 0 for x and y. Type: "basic", "surround", WIP. Acceptor: 0 = none, 1 = int acceptor, 2 = boolean acceptor
+// Just put 0, 0 for x and y. Type: "basic", "surround", WIP. Acceptor: 0 = none, 1 = boolean acceptor
 
 new Block(
   "If$Else",
@@ -1541,6 +1711,8 @@ new Block(
 new Block("Touching?", "sens", false, false, 0, 0, true, new Map(), "basic", 0);
 
 new Block("/", "oper", false, true, 0, 0, true, new Map(), "int", 0);
+
+new Block("=", "oper", false, false, 0, 0, true, new Map(), "bool", 0);
 
 const panelContainer = document.getElementById("panelContainer");
 const pannelButton = document.getElementById("panelButton");
