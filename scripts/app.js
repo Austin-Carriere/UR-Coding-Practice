@@ -315,14 +315,11 @@ class Block {
 
     this.inputs.forEach((input, index) => {
       const attachedBlock = this.inputVariables[index];
-
       if (attachedBlock) {
         input.style.width = this.getInputBlockSocketWidth(attachedBlock) + "px";
       } else {
         input.style.width = this.measureInputWidth(input) + "px";
       }
-
-      this.parent?.resizeToFitContent();
     });
   }
 
@@ -885,6 +882,20 @@ class Block {
     this.updateSurroundHeight();
   }
 
+  isDescendantOf(block) {
+    let current = this;
+
+    while (current) {
+      if (current === block) {
+        return true;
+      }
+
+      current = current.parent;
+    }
+
+    return false;
+  }
+
   setIntVar(input, intBlock) {
     const inputIndex = this.inputs.indexOf(input);
     if (inputIndex === -1) return;
@@ -956,6 +967,15 @@ class Block {
     boolBlock.parent = null;
     boolBlock.parentInput = null;
     this.updateAttachedBoolLayout(boolBlock);
+
+    const newWidth =
+      input.getBoundingClientRect().width -
+      boolBlock.element.getBoundingClientRect().width +
+      30;
+    input.setAttribute(
+      "d",
+      `M87.62,40.2H20.1C12.25,32.35,7.85,27.95,0,20.1h0C7.85,12.25,12.25,7.85,20.1,0h${newWidth}c7.85,7.85,12.25,12.25,20.1,20.1h0c-7.85,7.85-12.25,12.25-20.1,20.1Z`,
+    );
   }
 
   static getInputIndex(intBlock) {
@@ -1196,7 +1216,7 @@ class Block {
     this.input = input;
     this.selectionBox = selectionBox;
     this.boolSpace = block.querySelector(".boolSpace");
-    this.boolAcceptors = Array.from(block.querySelectorAll("#boolacceptor"));
+    this.boolAcceptors = Array.from(block.querySelectorAll(".boolacceptor"));
 
     if (selectionBox) {
       selectionBox.addEventListener("mousedown", (event) => {
@@ -1214,7 +1234,6 @@ class Block {
       });
 
       input.addEventListener("input", () => {
-        console.log("input");
         this.resizeToFitContent();
         this.inputVariables.forEach((intBlock) => {
           intBlock?.intReposition();
@@ -1526,7 +1545,11 @@ class Block {
       if (this.type === "int") {
         blocks.forEach((block) => {
           block.inputs.forEach((input) => {
-            if (this.intAttach(15, input) && block !== this) {
+            if (
+              this.intAttach(15, input) &&
+              block !== this &&
+              !block.isDescendantOf(this)
+            ) {
               block.setIntVar(input, this);
             } else {
               if (this.parent === block && this.parentInput === input) {
@@ -1538,12 +1561,16 @@ class Block {
       }
       if (this.type === "bool") {
         blocks.forEach((block) => {
+          if (block === this) return;
           block.boolAcceptors.forEach((boolAcceptor) => {
-            if (this.boolAttach(15, boolAcceptor) && block !== this) {
+            if (this.boolAttach(15, boolAcceptor)) {
               block.setBoolVar(boolAcceptor, this);
+              console.log(this.parent);
             } else {
+              console.log(this.parent, this.parentInput);
               if (this.parent === block && this.parentInput === boolAcceptor) {
                 block.removeBoolVar(boolAcceptor, this);
+                console.log("detactch bool");
               }
             }
           });
@@ -1560,7 +1587,6 @@ class Block {
     parent.appendChild(this.element);
 
     if (this.acceptor === 1 && this.boolAcceptors.length === 1) {
-      console.log(this.title1.getBoundingClientRect().width);
       this.boolAcceptors[0].style.transform =
         "translate(" +
         (this.title1.getBoundingClientRect().width * 4 + 30) +

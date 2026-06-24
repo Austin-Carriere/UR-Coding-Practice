@@ -162,8 +162,6 @@ body {
 .canvasPopup {
   border: 5px #777777 solid;
   margin: 10px auto;
-  width: 93%;
-  height: 89%;
   background: #282f44;
   border-radius: 29px;
 }

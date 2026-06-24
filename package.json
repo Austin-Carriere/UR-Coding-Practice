@@ -1,0 +1,24 @@
+{
+  "name": "ur-coding-practice",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Austin-Carriere/UR-Coding-Practice.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Austin-Carriere/UR-Coding-Practice/issues"
+  },
+  "homepage": "https://github.com/Austin-Carriere/UR-Coding-Practice#readme",
+  "dependencies": {
+    "@flatten-js/core": "^1.6.12"
+  }
+}
