@@ -73,14 +73,7 @@ body {
   height: 100%;
   width: 100%;
 }
-@keyframes MovingBlockBank {
-  from {
-    transform: translate(-70px, 0);
-  }
-  to {
-    transform: translate(0, 0px);
-  }
-}
+
 .blockBank {
   background: #5f709e;
   border-radius: 0 15px 15px 0;
@@ -150,13 +143,145 @@ body {
 }
 
 .panel {
-  display: block;
+  display: flex;
   background: #495664;
   text-align: center;
   border-radius: 30px 0px 0px 30px;
   border: 5px #000000 solid;
   border-right: none;
   flex: 1;
+  align-items: flex-start;
+}
+
+.canvasOverlayContainer{
+  overflow: visible;
+  height: 100%;
+  width: 0;
+}
+
+.canvasOverlay{
+  transform: translateX(0);
+  background-color: #333a45b5;
+  width: 2000px;
+  margin: 15px 0;
+  border-radius: 29px;
+  overflow: hidden;
+}
+
+.menu{
+  width: 100%;
+  height: 100%;
+  border-radius: 29px; 
+}
+
+#CarChange{
+  text-align: center;
+    overflow: hidden;
+}
+
+@keyframes carChangeAnim {
+  from{
+    transform: scale(0.98) translateY(3px);
+  } 
+  to{
+    transform: scale(1.03) translateY(-5px);
+  }
+}
+
+.CarPreview{
+  margin: 1% auto 0;
+  display: block;
+  image-rendering: pixelated;
+  animation: carChangeAnim 1.5s ease-in-out infinite alternate;
+}
+
+.CarChangeArrow{
+  image-rendering: pixelated;
+  transform: all 200ms ease-out;
+  cursor: pointer;
+  display: inline-block;
+  margin-top: 15px;
+}
+
+.CarCostumeText{
+  display: inline;
+  border: #181a2a 5px solid;
+  border-radius: 20px;
+  background-color: #4a78c2;
+  color: #f5d061;
+  font-size: 45px;
+  padding: 2px 12px;
+  font-family: "Jersey 10";
+  width:140px
+}
+
+@keyframes confirmButtonAnim {
+  from{
+    transform: scale(0.98) rotate(1deg);
+  }
+  to{
+    transform: scale(1.02) rotate(-1deg);
+  }
+}
+
+.CarCostumeConfirmButton:hover{
+  background-color: #446fb5;
+  border-color: #e6af2e;
+  animation-play-state:paused;
+}
+
+.CarCostumeConfirmButton:active{
+  background-color: #578de5;
+}
+
+.CarCostumeConfirmButton{
+border: #181a2a 5px solid;
+  border-radius: 20px;
+  background-color: #4a78c2;
+  color: #f5d061;
+  font-size: 60px;
+  padding: 2px 12px;
+  font-family: "Jersey 10";
+  width:240px;
+  box-shadow: #00000052 2px 15px 10px;
+  transition: all 200ms linear;
+  animation: confirmButtonAnim 2s ease-in-out infinite alternate;
+}
+
+.CarChangeTitle{
+  color: #f5d061;
+  display: block;
+  font-size: 80px;
+  font-family: "Jersey 10";
+  margin: 3px auto 10px;
+  text-decoration: underline #4a78c2;
+  animation: titleAnim 1s ease-in-out infinite alternate;
+}
+
+@keyframes titleAnim{
+  from{
+    transform: scale(0.98) rotate(2deg);
+  } 
+  to{
+    transform: scale(1.03) rotate(-2deg);
+  }
+}
+
+.Changer{
+  display: flex;
+  margin: 0 auto;
+  justify-content: center;
+  align-items: center;
+}
+
+.ArrowButton:active .CarChangeArrow{
+  transform: scale(0.95);
+}
+
+.ArrowButton{
+  background: none;
+  border: none;
+
 }
 
 .canvasPopup {

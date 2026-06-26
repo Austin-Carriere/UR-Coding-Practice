@@ -15,6 +15,7 @@
       href="https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap"
       rel="stylesheet"
     />
+    <link href="https://fonts.googleapis.com/css2?family=Jersey+10&display=swap" rel="stylesheet">
     <script defer src="scripts/app.js"></script>
     <script type="module" defer src="scripts/canvasScript.js"></script>
   </head>
@@ -81,6 +82,36 @@
           </button>
           <div class="panel">
           <canvas id = "canvas" class="canvasPopup"></canvas>
+          <div class = "canvasOverlayContainer">
+            <div class="canvasOverlay">
+              <div id = "CarChange" class="menu">
+                <h1 class="CarChangeTitle">Car Changer</h1>
+                  <img id="CarPreview" class="CarPreview" height="270px" src="images/Cars/Black_Car1.png">
+                  <div class="Changer">
+                    <button id="LeftArrowButtonColor" class="ArrowButton">
+                      <img class="CarChangeArrow" width="170px" src="images/LeftArrowUR.png">
+                    </button>
+                    <div class="CarCostumeText">Black</div>
+                    <button id="RightArrowButtonColor" class="ArrowButton">
+                      <img class="CarChangeArrow" width="170px" src = "images/RightArrowUR.png"> 
+                    </button>
+                  </div>
+
+                  <div class="Changer">
+                    <button id="LeftArrowButtonType" class="ArrowButton">
+                      <img class="CarChangeArrow" width="170px" src="images/LeftArrowUR.png">
+                    </button>
+                    <div id ="CarTypeText" class="CarCostumeText">Corvette</div>
+                    <button id="RightArrowButtonType" class="ArrowButton">
+                      <img class="CarChangeArrow" width="170px" src = "images/RightArrowUR.png"> 
+                    </button>
+                  </div>
+
+                  <button class="CarCostumeConfirmButton">Confirm</button>
+                  </div>
+              </div>
+            </div>
+          </div>
         </div>
          
       </div>
