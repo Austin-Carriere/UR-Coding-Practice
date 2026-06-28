@@ -1,10 +1,12 @@
-import { Point, Segment, Polygon } from '@flatten-js/core';
+import { Point, Segment, Polygon } from "https://cdn.jsdelivr.net/npm/@flatten-js/core/+esm";
 
 const canvas = document.querySelector(".canvasPopup");
 const panel = document.querySelector(".panel")
 const ctx = canvas.getContext("2d");
 const panelOverlay = document.querySelector(".canvasOverlay");
+let overlayNum = 1;
 
+const levelSelectorButton = document.getElementById("levelSelectorButton");
 
 let panelActive = false
 
@@ -155,9 +157,6 @@ class PlayerCar extends ConcreteObject {
     super.update()
     this.moveForward(1);
     this.rotateBy(0.5);
-    if (this.image.complete){
-      console.log("loading");
-    }
   }
 
   rotateBy(degrees) {
@@ -273,7 +272,7 @@ function loop(){
   requestAnimationFrame(loop);
 
 }
-loop();
+
 
 function toRadians(degrees){
   return degrees * (Math.PI/180);
@@ -295,19 +294,31 @@ function resizeCanvas() {
   ctx.webkitImageSmoothingEnabled = false;
   ctx.msImageSmoothingEnabled = false;
 }
+
+const carChangeMenu = document.getElementById("CarChange");
+const levelSelectorMenu = document.getElementById("levelSelector");
  
 function updateOverlay(){
+  disableAllOverlays();
   if (panelActive){
     panelOverlay.style.width = canvas.width + "px" ;
   } else {
     panelOverlay.style.width = 0;
   }
+  if (overlayNum === 1){
+    carChangeMenu.style.width = "";
+  } else if(overlayNum === 2){
+    levelSelectorMenu.style.width = "";
+  }
+
+
 }
 
-addEventListener("keydown", (key) => {
-  panelActive = !panelActive;
-  updateOverlay();
-})
+function disableAllOverlays(){
+  carChangeMenu.style.width = 0;
+  levelSelectorMenu.style.width = 0;
+}
+
 
 
 resizeCanvas();
@@ -325,6 +336,7 @@ const CarPreview = document.getElementById("CarPreview");
 const carCostumeText = document.querySelector(".CarCostumeText");
 const carTypeText = document.querySelector("#CarTypeText");
 const confirmButton = document.querySelector(".CarCostumeConfirmButton");
+const carChangerButton = document.getElementById("carChangerButton");
 
 let colorIndex = 0;
 let typeIndex = 0;
@@ -418,4 +430,27 @@ confirmButton.addEventListener("click", ()=> {
 });
 updateCarPreview();
 
+carChangerButton.addEventListener("click", ()=>{
+  if (overlayNum === 1){
+    panelActive = !panelActive;
+  } else {
+    panelActive = true;
+    overlayNum = 1;
+  }
+  updateOverlay();
+});
 
+levelSelectorButton.addEventListener("click", ()=>{
+  console.log("Before: ", panelActive);
+  if (overlayNum === 2){
+    panelActive = !panelActive;
+  } else {
+    panelActive = true;
+    overlayNum = 2;
+  }
+  console.log("After: ", panelActive);
+  updateOverlay();
+});
+
+
+loop();
