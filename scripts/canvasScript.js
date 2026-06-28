@@ -6,7 +6,12 @@ const ctx = canvas.getContext("2d");
 const panelOverlay = document.querySelector(".canvasOverlay");
 let overlayNum = 1;
 
+let paused = false;
+
 const levelSelectorButton = document.getElementById("levelSelectorButton");
+const playButton = document.getElementById("playButton");
+const restartButton = document.getElementById("restartButton");
+const playButtonImg = document.querySelector("#playButton img");
 
 let panelActive = false
 
@@ -154,7 +159,11 @@ class PlayerCar extends ConcreteObject {
   }
 
   update(){
-    super.update()
+    if (paused){
+      this.draw();
+       return;
+    }
+    super.update();
     this.moveForward(1);
     this.rotateBy(0.5);
   }
@@ -450,6 +459,16 @@ levelSelectorButton.addEventListener("click", ()=>{
   }
   console.log("After: ", panelActive);
   updateOverlay();
+});
+
+playButton.addEventListener("click", () =>{
+  paused = !paused;
+
+  if (paused){
+    playButtonImg.src = "/images/Pause Icon.png";
+  } else {
+    playButtonImg.src = "/images/Play Icon.png";
+  }
 });
 
 
