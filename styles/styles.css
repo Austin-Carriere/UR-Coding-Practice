@@ -171,19 +171,22 @@ body {
 
 .canvasButtonsContainer{
   flex: 1;
-  max-height: 7vh;
+  height: 7%;
   width: 90%;
   text-align: left;
   display: flex;
 }
 .NormalButtonsContainer{
   height: 100%;
-  text-align: left;
+  display: flex;
+  align-items: center;
 }
 
 .PlayButtonsContainer{
-  text-align: right;
   flex: 1;
+  display: flex;
+  align-items: center;
+  flex-direction: row-reverse;
 }
 
 .canvasButton{
@@ -243,6 +246,7 @@ body {
 .CarPreview{
   margin: 1% auto 0;
   display: block;
+  min-height: 190px;
   image-rendering: pixelated;
   animation: carChangeAnim 1.5s ease-in-out infinite alternate;
 }
@@ -321,6 +325,8 @@ border: #181a2a 5px solid;
 
 .Changer{
   display: flex;
+  height: 15%;
+  min-height: 70px;
   margin: 0 auto;
   justify-content: center;
   align-items: center;

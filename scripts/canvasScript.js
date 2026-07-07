@@ -1,12 +1,33 @@
-import { Point, Segment, Polygon } from "https://cdn.jsdelivr.net/npm/@flatten-js/core/+esm";
+import { Point, Segment, Polygon} from "https://cdn.jsdelivr.net/npm/@flatten-js/core/+esm";
+
+import Victor from "https://cdn.jsdelivr.net/npm/victor@1.1.0/+esm";
 
 const canvas = document.querySelector(".canvasPopup");
 const panel = document.querySelector(".panel")
 const ctx = canvas.getContext("2d");
 const panelOverlay = document.querySelector(".canvasOverlay");
 let overlayNum = 1;
-
+let backgroundImage = new Image();
+backgroundImage.src = "/images/Enviorment Assets/Backgrounds/Background 1.png";
 let paused = false;
+const BackgroundScaleFactor = 0.27;
+
+const debugMode = false; //If true, will show hitboxes and other debug info
+
+//-------------------Enviorment Asset Loader-------------------------
+let billboardImages = [];
+async function preloadBillboards() {
+  const promises = [];
+
+  for (let i = 1; i <= 7; i++) {
+    promises.push(
+      loadImage(`/images/Enviorment Assets/Billboards/Billboard${i}.png`)
+    );
+  }
+
+  billboardImages = await Promise.all(promises);
+}
+
 
 const levelSelectorButton = document.getElementById("levelSelectorButton");
 const playButton = document.getElementById("playButton");
@@ -16,6 +37,98 @@ const playButtonImg = document.querySelector("#playButton img");
 let panelActive = false
 
 let canvasObjects = []; //Store one copy of everything on the canvas
+
+class Triangle {
+  constructor(triangle){
+    this.triangle = triangle
+    this.b = triangle.vertices[0];
+    this.c = triangle.vertices[1];
+    this.a = triangle.vertices[2];
+
+    this.A = Math.sqrt(Math.pow(this.b.x - this.a.x, 2) + Math.pow(this.b.y - this.a.y, 2));
+    this.B = Math.sqrt(Math.pow(this.c.x - this.b.x, 2) + Math.pow(this.c.y - this.b.y, 2));
+    this.C = Math.sqrt(Math.pow(this.a.x - this.c.x, 2) + Math.pow(this.a.y - this.c.y, 2));
+
+    this.angleA = toDegrees(Math.acos((Math.pow(this.B, 2) + Math.pow(this.C, 2) - Math.pow(this.A, 2)) / (2 * this.B * this.C)));
+    this.angleB = toDegrees(Math.acos((Math.pow(this.A, 2) + Math.pow(this.C, 2) - Math.pow(this.B, 2)) / (2 * this.A * this.C)));
+    this.angleC = toDegrees(Math.acos((Math.pow(this.A, 2) + Math.pow(this.B, 2) - Math.pow(this.C, 2)) / (2 * this.A * this.B)));
+
+    this.rightAngleVertex = this.findRightAngleVertex();
+
+    this.altitude = this.findLegsProduct() / this.findHypotenuse();
+
+    this.altitudeIntersectionPoint = new Point(this.findAltitudeIntersectionPointX(), this.findAltitudeIntersectionPointY());
+  }
+
+  findRightAngleVertex(){
+    if (this.angleA === 90) {
+      return this.a;
+    } else if (this.angleB === 90) {
+      return this.b;
+    } else if (this.angleC === 90) {
+      return this.c;
+    } else {
+      throw new Error("No right angle found in the triangle.");
+    }
+  }
+
+  findLegsProduct(){
+    var leg1, leg2;
+    if (this.rightAngleVertex === this.b) {
+      leg1 = this.C;
+      leg2 = this.A;
+    } else if (this.rightAngleVertex === this.c) {
+      leg1 = this.A;
+      leg2 = this.B;
+    } else if (this.rightAngleVertex === this.a) {
+      leg1 = this.C;
+      leg2 = this.B;
+    }
+
+    return leg1 * leg2;
+
+
+  }
+
+  findHypotenuse(){
+    if (this.rightAngleVertex === this.b) {
+      return this.B;
+    } else if (this.rightAngleVertex === this.c) {
+      return this.C;
+    } else if (this.rightAngleVertex === this.a) {
+      return this.A;
+    }
+  }
+
+  findAltitudeIntersectionPointX(){
+    if (this.rightAngleVertex === this.a) {
+      return ((Math.pow(this.B, 2) * this.b.x) + (Math.pow(this.C, 2) + this.c.x)) / Math.pow(this.A, 2);
+    } else if (this.rightAngleVertex === this.b) {
+      return ((Math.pow(this.A, 2) * this.a.x) + (Math.pow(this.C, 2) + this.c.x)) / Math.pow(this.B, 2);
+    } else if (this.rightAngleVertex === this.c) {
+      return ((Math.pow(this.A, 2) * this.a.x) + (Math.pow(this.B, 2) + this.b.x)) / Math.pow(this.C, 2);
+    }
+  }
+
+  findAltitudeIntersectionPointY(){
+    if (this.rightAngleVertex === this.a) {
+      return ((Math.pow(this.B, 2) * this.b.y) + (Math.pow(this.C, 2) + this.c.y)) / Math.pow(this.A, 2);
+    } else if (this.rightAngleVertex === this.b) {
+      return ((Math.pow(this.A, 2) * this.a.y) + (Math.pow(this.C, 2) + this.c.y)) / Math.pow(this.B, 2);
+    } else if (this.rightAngleVertex === this.c) {
+      return ((Math.pow(this.A, 2) * this.a.y) + (Math.pow(this.B, 2) + this.b.y)) / Math.pow(this.C, 2);
+    }
+  }
+
+  get OffsetX(){
+    return this.altitudeIntersectionPoint.x - this.rightAngleVertex.x;
+  }
+
+  get OffsetY(){
+    return this.altitudeIntersectionPoint.y - this.rightAngleVertex.y;
+  }
+
+}
 
 class CanvasObject {
   //abstract
@@ -96,28 +209,96 @@ class CanvasObject {
 }
 
 class ConcreteObject extends CanvasObject {
-  constructor(x, y, z, image, scale, heading) {
+  constructor(x, y, z, image, scale = 1, heading = 0, hitboxXOffset = 0, hitboxYOffset = 0, hitboxWidth = image.width, hitboxHeight = image.height) {
     if (new.target === ConcreteObject) {
       throw new console.error("Cannot Instantiate Concrete Object");
     }
     super(x, y, z, image, scale, heading);
-    this.hitbox = this.updatePolygonPos();
+   
     this.moveable = false;
+    this.hitboxWidth = hitboxWidth;
+    this.hitboxHeight = hitboxHeight; 
+    this.hitboxXOffset = hitboxXOffset;
+    this.hitboxYOffset = hitboxYOffset;
+    this.fillColor = "red"
+    this.hitbox = this.updatePolygonPos();
   }
+
+  get hitboxX() {
+    return this.actualX + this.hitboxXOffset;
+  }
+
+  get hitboxY() {
+    return this.actualY + this.hitboxYOffset;
+  }
+
+  get center() {
+    let x = 0;
+    let y = 0;
+
+    for (let point of this.hitboxPoints) {
+        x += point.x;
+        y += point.y;
+    }
+
+    return new Victor(
+        x / this.hitboxPoints.length,
+        y / this.hitboxPoints.length
+    );
+}
 
   update() {
     super.update(); //Echo through to Canvas Object
-    if (this.moveable) this.hitbox = this.updatePolygonPos();
+    this.hitbox = this.updatePolygonPos();
+    this.drawHitbox();
   }
 
   updatePolygonPos() {
-    return new Polygon([
-      new Point(this.x, this.y),
-      new Point(this.x + this.width, this.y),
-      new Point(this.x + this.width, this.y + this.height),
-      new Point(this.x, this.y + this.height),
-    ]);
-  }
+    const angle = toRadians(this.heading);
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+
+    const x = this.hitboxX;
+    const y = this.hitboxY;
+
+    const cx = x + this.hitboxWidth / 2;
+    const cy = y + this.hitboxHeight / 2;
+
+    function rotatePoint(px, py) {
+        const dx = px - cx;
+        const dy = py - cy;
+
+        return new Point(
+            cx + dx * cos - dy * sin,
+            cy + dx * sin + dy * cos
+        );
+    }
+
+    const p1 = rotatePoint(x, y);
+    const p2 = rotatePoint(x + this.hitboxWidth, y);
+    const p3 = rotatePoint(x + this.hitboxWidth, y + this.hitboxHeight);
+    const p4 = rotatePoint(x, y + this.hitboxHeight);
+
+    this.hitboxPoints = [p1, p2, p3, p4];
+
+    return new Polygon(this.hitboxPoints);
+}
+
+ drawHitbox() {
+  if (!debugMode) return; //Only draw hitboxes if debugMode is true
+    ctx.strokeStyle = this.fillColor;
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(this.hitboxPoints[0].x, this.hitboxPoints[0].y);
+
+    for (let i = 1; i < this.hitboxPoints.length; i++) {
+        ctx.lineTo(this.hitboxPoints[i].x, this.hitboxPoints[i].y);
+    }
+
+    ctx.closePath();
+    ctx.stroke();
+}
 
   isIntersecting(objs) {
     for (const object of objs) {
@@ -134,16 +315,153 @@ class ConcreteObject extends CanvasObject {
     let intersectingObjects = [];
     objs.forEach((object) => {
         if (object === this) return; //Just in case for some reason objs contains the caller
-      if (this.hitbox.intersect(object.hitbox).length !== 0) {
+      if (object.collide(this)) {
         intersectingObjects.push(object);
       }
     });
     return intersectingObjects
   }
 }
+let rigidBodies = [];
+class RigidBody extends ConcreteObject {
+  constructor(x, y, z, image, scale = 1, heading = 0, hitboxXOffset = 0, hitboxYOffset = 0, hitboxWidth = image.width, hitboxHeight = image.height) {
+    if (new.target === RigidBody) {
+      throw new console.error("Cannot Instantiate Rigid Body");
+    }
+    super(x, y, z, image, scale, heading, hitboxXOffset, hitboxYOffset, hitboxWidth, hitboxHeight);
+     
+    rigidBodies.push(this);
+    }
+
+    update(){
+  super.update();
+}
+
+ computeNormal(p1, p2) {
+    let edge = new Victor(
+        p2.x - p1.x,
+        p2.y - p1.y
+    );
+
+    let normal = new Victor(
+        -edge.y,
+        edge.x
+    );
+
+    return normal.normalize();
+}
+
+  get axes(){
+     return [
+        this.computeNormal(this.hitboxPoints[0], this.hitboxPoints[1]),
+        this.computeNormal(this.hitboxPoints[1], this.hitboxPoints[2])
+    ];
+  }
+
+  project(axis){
+    let max = -Infinity;
+    let min = Infinity;
+
+    for (let i = 0; i < this.hitboxPoints.length; i++) {
+        let vertex = new Victor(
+            this.hitboxPoints[i].x,
+            this.hitboxPoints[i].y
+        );
+
+        let projection = vertex.dot(axis);
+
+        max = Math.max(max, projection);
+        min = Math.min(min, projection);
+    }
+
+    return [min, max];
+  }
+
+  overlap(projA, projB){
+    return projA[0] <= projB[1] && // Check if both extremes are overlapping 0 = min 1 = max
+           projB[0] <= projA[1];
+  }
+
+  collide(rigidBody){
+    if (this === rigidBody) return false; 
+    let axes = [this.axes, rigidBody.axes].flat();
+
+     for (let axis of axes) {
+        let projectionA = this.project(axis);
+        let projectionB = rigidBody.project(axis);
+
+        if (!this.overlap(projectionA, projectionB)) {
+            return false; // separating axis found
+        }
+    }
+
+    return true; // no separating axis found, collision detected
+  }
+
+  getMTV(rigidBody) {
+    let smallestOverlap = Infinity;
+    let smallestAxis = null;
+
+    let axes = [
+        this.axes,
+        rigidBody.axes
+    ].flat();
+
+    for (let axis of axes) {
+        let projA = this.project(axis);
+        let projB = rigidBody.project(axis);
+
+        let overlap = Math.min(projA[1], projB[1]) -
+                      Math.max(projA[0], projB[0]);
+
+        if (overlap <= 0) {
+          console.error("MTV IS NULL")
+            return new Victor(0, 0); // no collision
+        }
+
+        if (overlap < smallestOverlap) {
+            smallestOverlap = overlap;
+            smallestAxis = axis;
+        }
+    }
+    let direction = rigidBody.center.clone().subtract(this.center);
+
+if (direction.dot(smallestAxis) < 0) {
+    smallestAxis.invert();
+}
+
+return smallestAxis.clone().multiplyScalar(smallestOverlap);
+}
+
+
+
+
+}
+
+
+class Billboard extends RigidBody {
+  constructor(x, y, z, forceCostume = null) {
+    let img = null;
+     if (forceCostume !== null && billboardImages[forceCostume]) {
+    img = billboardImages[forceCostume];
+  } else {
+    img = getRandomImg(billboardImages);
+  }
+    super(x, y, z, img, 1, 0, 90, 220, 60, 60);
+  }
+}
+
+class Barrier extends RigidBody {
+  constructor(x, y, heading = 0, hitboxWidth = 20, hitboxHeight = 20) {
+    
+    super(x, y, 0, new Image(hitboxWidth, hitboxHeight), 1, heading, 0, 0, hitboxWidth, hitboxHeight);
+    this.fillColor = "blue";
+  }
+  
+}
 
 class FloatingObject extends CanvasObject {
-  constructor(x, y, z, image, scale, heading) {
+  constructor(x, y, z, image, scale = 1, heading = 0) {
     if (new.target === FloatingObject) {
       throw new console.error("Cannot Instantiate Floating Object");
     }
@@ -153,19 +471,46 @@ class FloatingObject extends CanvasObject {
 
 }
 
-class PlayerCar extends ConcreteObject {
+
+
+class PlayerCar extends RigidBody {
   constructor(x, y, image, heading = 0){
     super(x, y, 20, image, 1, heading);
+    this.moveable = true;
+    this.fillColor = "red";
+    this.startX = x;
+    this.startY = y;
+    this.startHeading = heading;
   }
 
   update(){
     if (paused){
       this.draw();
+      this.drawHitbox();
        return;
     }
     super.update();
+    this.barrierContact();
     this.moveForward(1);
-    this.rotateBy(0.5);
+    
+  }
+
+  reset(){
+    this.moveTo(this.startX, this.startY);
+    this.rotateTo(this.startHeading);
+  }
+
+  barrierContact(){
+
+    rigidBodies.forEach((rigidBody)=>{
+      if(this.collide(rigidBody)){
+         rigidBody.fillColor = "lime";
+         this.moveByVector(this.getMTV(rigidBody));
+         } else {
+          if (rigidBody === this) return;
+          rigidBody.fillColor = "blue";
+         }
+    });
   }
 
   rotateBy(degrees) {
@@ -181,6 +526,16 @@ class PlayerCar extends ConcreteObject {
     this.y = y;
   }
 
+  moveBy(x, y){
+    this.x += x;
+    this.y += y;
+  }
+
+  moveByVector(vector){
+    this.x += vector.x;
+    this.y += vector.y;
+  }
+
   moveForward(units){
     this.x -= (units * Math.sin(toRadians(this.heading))); //units is negative because otherwise it goes backwards
     this.y += (units * Math.cos(toRadians(this.heading)));
@@ -194,6 +549,26 @@ class PlayerCar extends ConcreteObject {
     this.image = images[newImageSrc];
   }
 
+}
+
+class Background{
+  constructor(image){
+    this.backgroundImage = image;
+    this.x = backgroundImage.width / 2 * BackgroundScaleFactor;
+    this.y = backgroundImage.height / 2 * BackgroundScaleFactor;
+  }
+
+
+  get actualX() {
+    return camera.x - this.x;
+  }
+  get actualY(){
+    return camera.y - this.y;
+  }
+
+  draw(){
+    ctx.drawImage(backgroundImage, this.actualX, this.actualY,  backgroundImage.width*BackgroundScaleFactor, backgroundImage.height*BackgroundScaleFactor);
+  }
 }
 
 let drag = false;
@@ -257,9 +632,8 @@ class Camera {
 
   
 }
-const camera = new Camera(800, 800);
-
-
+const camera = new Camera(10000, 10000);
+let background = new Background(backgroundImage); 
 function loop(){
   if (panelActive) {
     updateOverlay();
@@ -273,6 +647,7 @@ function loop(){
     ctx.translate(canvas.width / 2, canvas.height / 2); // set center to (0,0)
 
     ctx.scale(camera.zoom, camera.zoom);
+    background.draw();
   canvasObjects.forEach((object) => {
     object.update();
   });
@@ -282,17 +657,47 @@ function loop(){
 
 }
 
+async function startGame() {
+  await preloadBillboards();
+
+  new Billboard(320, 320, 30, 90, 220, 60, 60);
+  new Barrier(100, 100, 30, 200, 100)
+
+  loop();
+}
+
 
 function toRadians(degrees){
   return degrees * (Math.PI/180);
 }
 
+function toDegrees(radians){
+  return radians * (180/Math.PI);
+}
+
+function getRandomInt(max) {
+  return Math.floor(Math.random() * max);
+}
+
+function getRandomImg(imgArray){
+  return imgArray[Math.floor(Math.random() * imgArray.length)];
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+
 function resizeCanvas() {
   canvas.width = panel.getBoundingClientRect().width*.87;
-  canvas.height = panel.getBoundingClientRect().height*.87;
+  canvas.height = panel.getBoundingClientRect().height*.82;
    panelOverlay.style.height = canvas.height + "px";
   let overlayCoverPose = -parseFloat(getComputedStyle(canvas).marginRight) + -canvas.width + -parseFloat(getComputedStyle(canvas).borderRight);
-  console.log(canvas.width);
   panelOverlay.style.transform = `translateX(${overlayCoverPose}px)`;
   updateOverlay();
 
@@ -375,10 +780,10 @@ for (let t = 0; t < typeArray.length; t++) {
 
 // Then create the player
 let car = new PlayerCar(
-    400,
-    400,
+    200,
+    300,
     images[`/images/Cars/${colorArray[0][0]}_Car1.png`], //have to do this weird arrangment so I can load all the images in first
-    270
+    180
 );
 
 //--------------------Car Changer cont.----------------------------------
@@ -464,12 +869,16 @@ levelSelectorButton.addEventListener("click", ()=>{
 playButton.addEventListener("click", () =>{
   paused = !paused;
 
-  if (paused){
+  if (!paused){
     playButtonImg.src = "/images/Pause Icon.png";
   } else {
     playButtonImg.src = "/images/Play Icon.png";
   }
 });
 
+restartButton.addEventListener("click", ()=>{
+  car.reset();
+});
 
-loop();
+
+startGame();
