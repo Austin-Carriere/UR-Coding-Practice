@@ -12,7 +12,7 @@ backgroundImage.src = "/images/Enviorment Assets/Backgrounds/Background 1.png";
 let paused = false;
 const BackgroundScaleFactor = 0.27;
 
-const debugMode = false; //If true, will show hitboxes and other debug info
+let debugMode = false; //If true, will show hitboxes and other debug info
 
 //-------------------Enviorment Asset Loader-------------------------
 let billboardImages = [];
@@ -331,30 +331,77 @@ class RigidBody extends ConcreteObject {
     super(x, y, z, image, scale, heading, hitboxXOffset, hitboxYOffset, hitboxWidth, hitboxHeight);
      
     rigidBodies.push(this);
+    this.velocity = new Victor(0, 0);
     }
+    
 
     update(){
-  super.update();
+      super.update();
+      this.moveByVector(this.velocity); //Move by velocity every Tick
+      this.velocity.multiplyScalar(0.95); //Friction
+  }
+
+  setVelocity(x, y){
+    this.velocity = new Victor(x, y);
+  }
+
+  get speed(){
+    return this.velocity.length();
+  }
+
+  setSpeed(speed){
+    let forward = new Victor(
+        -Math.sin(toRadians(this.heading)),
+         Math.cos(toRadians(this.heading))
+    );
+    this.velocity = forward;
+  }
+
+  moveByVector(vector){
+    try {
+    this.x += vector.x;
+    this.y += vector.y;
+    } catch (error) {
+      this.velocity = new Victor(0, 0);
+      console.log("Error in moveByVector: ", error);
+    }
+    
+  }
+
+accelerate(amount) {
+    let forward = new Victor(
+        -Math.sin(toRadians(this.heading)),
+         Math.cos(toRadians(this.heading))
+    );
+
+    this.velocity.add(
+        forward.multiplyScalar(amount)
+    );
 }
 
- computeNormal(p1, p2) {
+static angleDifference(a, b) {
+    return ((a - b + 180) % 360) - 180;
+}
+ computeAxis(p1, p2) {
     let edge = new Victor(
         p2.x - p1.x,
         p2.y - p1.y
     );
 
-    let normal = new Victor(
-        -edge.y,
-        edge.x
-    );
-
-    return normal.normalize();
+    return {
+        normal: new Victor(-edge.y, edge.x).normalize(),
+        edge: {
+            p1,
+            p2
+        },
+        owner: this
+    };
 }
 
   get axes(){
      return [
-        this.computeNormal(this.hitboxPoints[0], this.hitboxPoints[1]),
-        this.computeNormal(this.hitboxPoints[1], this.hitboxPoints[2])
+        this.computeAxis(this.hitboxPoints[0], this.hitboxPoints[1]),
+        this.computeAxis(this.hitboxPoints[1], this.hitboxPoints[2])
     ];
   }
 
@@ -386,7 +433,8 @@ class RigidBody extends ConcreteObject {
     if (this === rigidBody) return false; 
     let axes = [this.axes, rigidBody.axes].flat();
 
-     for (let axis of axes) {
+     for (let axisInfo of axes) {
+        let axis = axisInfo.normal;
         let projectionA = this.project(axis);
         let projectionB = rigidBody.project(axis);
 
@@ -399,6 +447,9 @@ class RigidBody extends ConcreteObject {
   }
 
   getMTV(rigidBody) {
+    if (this.collide(rigidBody) === false) {
+        return null; // no collision
+    }
     let smallestOverlap = Infinity;
     let smallestAxis = null;
 
@@ -407,7 +458,8 @@ class RigidBody extends ConcreteObject {
         rigidBody.axes
     ].flat();
 
-    for (let axis of axes) {
+    for (let axisInfo of axes) {
+       let axis = axisInfo.normal;
         let projA = this.project(axis);
         let projB = rigidBody.project(axis);
 
@@ -415,29 +467,40 @@ class RigidBody extends ConcreteObject {
                       Math.max(projA[0], projB[0]);
 
         if (overlap <= 0) {
-          console.error("MTV IS NULL")
-            return new Victor(0, 0); // no collision
+            return null; // no collision
         }
 
         if (overlap < smallestOverlap) {
             smallestOverlap = overlap;
-            smallestAxis = axis;
+            smallestAxis = axisInfo;
         }
     }
-    let direction = rigidBody.center.clone().subtract(this.center);
 
-if (direction.dot(smallestAxis) < 0) {
-    smallestAxis.invert();
+    let normal = smallestAxis.normal.clone();
+
+let direction = rigidBody.center.clone().subtract(this.center);
+
+if (direction.dot(normal) < 0) {
+    normal.invert();
 }
 
-return smallestAxis.clone().multiplyScalar(smallestOverlap);
+console.log(this.velocity === null);
+
+let tangent = new Victor(
+    smallestAxis.edge.p2.x - smallestAxis.edge.p1.x,
+    smallestAxis.edge.p2.y - smallestAxis.edge.p1.y
+).normalize();
+
+return {
+    mtv: normal.clone().multiplyScalar(smallestOverlap),
+    normal,
+    tangent,
+    edge: smallestAxis.edge
+};
+
+
 }
-
-
-
-
 }
-
 
 class Billboard extends RigidBody {
   constructor(x, y, z, forceCostume = null) {
@@ -487,17 +550,18 @@ class PlayerCar extends RigidBody {
     if (paused){
       this.draw();
       this.drawHitbox();
+      this.updatePolygonPos();
        return;
     }
     super.update();
     this.barrierContact();
-    this.moveForward(1);
-    
+    this.accelerate(0.6);
   }
 
   reset(){
     this.moveTo(this.startX, this.startY);
     this.rotateTo(this.startHeading);
+    this.velocity = new Victor(0, 0);
   }
 
   barrierContact(){
@@ -505,12 +569,31 @@ class PlayerCar extends RigidBody {
     rigidBodies.forEach((rigidBody)=>{
       if(this.collide(rigidBody)){
          rigidBody.fillColor = "lime";
-         this.moveByVector(this.getMTV(rigidBody));
+         let collision = this.getMTV(rigidBody);
+        if (collision === null) return;
+        this.moveByVector(collision.mtv);
+
+        let speed = this.velocity.dot(collision.tangent);
+
+        this.velocity = collision.tangent
+        .clone()
+        .multiplyScalar(speed);
+
+        this.contactRotation(collision);
          } else {
           if (rigidBody === this) return;
           rigidBody.fillColor = "blue";
          }
     });
+  }
+
+  contactRotation(collision){
+    let angleDifference = RigidBody.angleDifference(this.heading, Math.abs(collision.tangent.angleDeg()));
+    if (Math.abs(angleDifference) < 90) {
+        this.rotateBy(-angleDifference * 0.03 * (this.speed * 0.2));
+    } else {
+     this.rotateBy(-angleDifference * 0.04 * (this.speed * 0.2)); 
+    }
   }
 
   rotateBy(degrees) {
@@ -531,11 +614,6 @@ class PlayerCar extends RigidBody {
     this.y += y;
   }
 
-  moveByVector(vector){
-    this.x += vector.x;
-    this.y += vector.y;
-  }
-
   moveForward(units){
     this.x -= (units * Math.sin(toRadians(this.heading))); //units is negative because otherwise it goes backwards
     this.y += (units * Math.cos(toRadians(this.heading)));
@@ -544,6 +622,16 @@ class PlayerCar extends RigidBody {
   moveBackward(units){
     this.moveForward(-units);
   }
+  accelerate(amount) {
+    let forward = new Victor(
+        -Math.sin(toRadians(this.heading)),
+         Math.cos(toRadians(this.heading))
+    );
+
+    this.velocity.add(
+        forward.multiplyScalar(amount)
+    );
+}
 
   changeImage(newImageSrc){
     this.image = images[newImageSrc];
@@ -659,6 +747,7 @@ function loop(){
 
 async function startGame() {
   await preloadBillboards();
+  await loadImage("/images/Cars/Black_Car1.png");
 
   new Billboard(320, 320, 30, 90, 220, 60, 60);
   new Barrier(100, 100, 30, 200, 100)
@@ -682,6 +771,9 @@ function getRandomInt(max) {
 function getRandomImg(imgArray){
   return imgArray[Math.floor(Math.random() * imgArray.length)];
 }
+
+
+
 
 function loadImage(src) {
   return new Promise((resolve, reject) => {
@@ -780,7 +872,7 @@ for (let t = 0; t < typeArray.length; t++) {
 
 // Then create the player
 let car = new PlayerCar(
-    200,
+    0,
     300,
     images[`/images/Cars/${colorArray[0][0]}_Car1.png`], //have to do this weird arrangment so I can load all the images in first
     180
@@ -855,14 +947,12 @@ carChangerButton.addEventListener("click", ()=>{
 });
 
 levelSelectorButton.addEventListener("click", ()=>{
-  console.log("Before: ", panelActive);
   if (overlayNum === 2){
     panelActive = !panelActive;
   } else {
     panelActive = true;
     overlayNum = 2;
   }
-  console.log("After: ", panelActive);
   updateOverlay();
 });
 
@@ -878,6 +968,14 @@ playButton.addEventListener("click", () =>{
 
 restartButton.addEventListener("click", ()=>{
   car.reset();
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "i") {
+    debugMode = !debugMode;
+  }
+
+  
 });
 
 
