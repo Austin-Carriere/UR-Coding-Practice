@@ -10,23 +10,46 @@ let overlayNum = 1;
 let backgroundImage = new Image();
 backgroundImage.src = "/images/Enviorment Assets/Backgrounds/Background 1.png";
 let paused = false;
-const BackgroundScaleFactor = 0.27;
+const BackgroundScaleFactor = 0.242;
 
-let debugMode = false; //If true, will show hitboxes and other debug info
+let debugMode = true; //If true, will show hitboxes and other debug info
 
 //-------------------Enviorment Asset Loader-------------------------
 let billboardImages = [];
-async function preloadBillboards() {
-  const promises = [];
-
+let trashcanImages = [];
+let images = {};
+async function preloadImages() {
+  let promises = [];
   for (let i = 1; i <= 7; i++) {
     promises.push(
       loadImage(`/images/Enviorment Assets/Billboards/Billboard${i}.png`)
     );
   }
-
+  
   billboardImages = await Promise.all(promises);
+
+  promises = [];
+
+  for (let i = 1; i <= 3; i++){
+    promises.push(
+      loadImage(`/images/Enviorment Assets/Trash Cans/trashcan${i}.png`)
+    );
+  }
+
+  trashcanImages = await Promise.all(promises);
+  promises = [];
+
+ 
+
+  for (let t = 0; t < typeArray.length; t++) {
+    for (const color of colorArray[t]) {
+        const path = `/images/Cars/${color}_Car${t + 1}.png`;
+        images[path] = await loadImage(path);
+    }
 }
+  
+}
+
 
 
 const levelSelectorButton = document.getElementById("levelSelectorButton");
@@ -216,21 +239,22 @@ class ConcreteObject extends CanvasObject {
     super(x, y, z, image, scale, heading);
    
     this.moveable = false;
-    this.hitboxWidth = hitboxWidth;
-    this.hitboxHeight = hitboxHeight; 
-    this.hitboxXOffset = hitboxXOffset;
-    this.hitboxYOffset = hitboxYOffset;
+    this.hitboxWidth = hitboxWidth * scale;
+    this.hitboxHeight = hitboxHeight * scale; 
+    this.hitboxOffset = new Victor(hitboxXOffset, hitboxYOffset);
     this.fillColor = "red"
     this.hitbox = this.updatePolygonPos();
   }
 
-  get hitboxX() {
-    return this.actualX + this.hitboxXOffset;
-  }
+  //need to make offset be consitent with rotation
 
-  get hitboxY() {
-    return this.actualY + this.hitboxYOffset;
-  }
+get hitboxX() {
+  return this.actualX + this.hitboxOffset.x;
+}
+
+get hitboxY() {
+  return this.actualY + this.hitboxOffset.y;
+}
 
   get center() {
     let x = 0;
@@ -324,21 +348,84 @@ class ConcreteObject extends CanvasObject {
 }
 let rigidBodies = [];
 class RigidBody extends ConcreteObject {
-  constructor(x, y, z, image, scale = 1, heading = 0, hitboxXOffset = 0, hitboxYOffset = 0, hitboxWidth = image.width, hitboxHeight = image.height) {
+  constructor(x, y, z, image, mass, scale = 1, heading = 0, hitboxXOffset = 0, hitboxYOffset = 0, hitboxWidth = image.width, hitboxHeight = image.height, ) {
     if (new.target === RigidBody) {
       throw new console.error("Cannot Instantiate Rigid Body");
     }
     super(x, y, z, image, scale, heading, hitboxXOffset, hitboxYOffset, hitboxWidth, hitboxHeight);
-     
+     this.startX = x;
+    this.startY = y;
+    this.startHeading = heading;
     rigidBodies.push(this);
     this.velocity = new Victor(0, 0);
+    this.collisionImmunity =0;
+    this.constrained = true;
+    this.mass = mass;
     }
+
+    reset(){
+    this.moveTo(this.startX, this.startY);
+    this.rotateTo(this.startHeading);
+    this.velocity = new Victor(0, 0);
+  }
+
+  drawVector(){
+    if (!debugMode) return;
+    ctx.beginPath();
+    ctx.moveTo(this.actualX + this.width/2, this.actualY + this.height/2);
+    ctx.lineTo((this.actualX + this.width/2 + this.velocity.x * -10), (this.actualY + this.height/2 + this.velocity.y* -10));
+    
+  
+      ctx.lineWidth = 15;          
+      ctx.strokeStyle = '#ff0000'; 
+      ctx.lineCap = 'butt';
+
+      ctx.stroke();
+  }
+
+  drawGivenVector(vector){
+    if (!debugMode) return;
+    ctx.beginPath();
+    ctx.moveTo(this.actualX + 20, this.actualY);
+    ctx.lineTo((this.actualX + 20 + vector.x * -10), (this.actualY + vector.y* -10));
+    
+  
+      ctx.lineWidth = 10;          
+      ctx.strokeStyle = '#2fff00'; 
+      ctx.lineCap = 'butt';
+
+      ctx.stroke();
+  }
+
+  rotateBy(degrees) {
+    this.heading += degrees;
+  }
+
+  rotateTo(degress) {
+    this.heading = degress;
+  }
+
+  moveTo(x, y){
+    this.x = x;
+    this.y = y;
+  }
+
+  moveBy(x, y){
+    this.x += x;
+    this.y += y;
+  }
     
 
-    update(){
+  update(){
       super.update();
+      this.drawVector();
+      if (paused) return;
       this.moveByVector(this.velocity); //Move by velocity every Tick
-      this.velocity.multiplyScalar(0.95); //Friction
+      this.velocity.multiplyScalar(0.97); //Friction
+      this.drawVector();
+      if (this.collisionImmunity > 0){
+        this.collisionImmunity--;
+      }
   }
 
   setVelocity(x, y){
@@ -366,6 +453,18 @@ class RigidBody extends ConcreteObject {
       console.log("Error in moveByVector: ", error);
     }
     
+  }
+
+  onCollision(collider){
+    if (this.constrained) return;
+    let randomNum = Math.random();
+    if (this.collisionImmunity > 0) return;
+
+    this.collisionImmunity += 30;
+    this.velocity.multiplyScalar(collider.mass/this.mass).add(collider.velocity.clone());
+
+    collider.velocity.multiplyScalar(this.mass/collider.mass);
+    this.velocity.rotate(toRadians(randomNum * 80 - 40));
   }
 
 accelerate(amount) {
@@ -484,8 +583,6 @@ if (direction.dot(normal) < 0) {
     normal.invert();
 }
 
-console.log(this.velocity === null);
-
 let tangent = new Victor(
     smallestAxis.edge.p2.x - smallestAxis.edge.p1.x,
     smallestAxis.edge.p2.y - smallestAxis.edge.p1.y
@@ -510,14 +607,27 @@ class Billboard extends RigidBody {
   } else {
     img = getRandomImg(billboardImages);
   }
-    super(x, y, z, img, 1, 0, 90, 220, 60, 60);
+    super(x, y, z, img, 400, 1, 0, 90, 220, 60, 60);
+  }
+}
+
+class TrashCan extends RigidBody {
+  constructor(x, y, forceCostume = null){
+    let img = null;
+     if (forceCostume !== null && trashcanImages[forceCostume]) {
+    img = trashcanImages[forceCostume];
+  } else {
+    img = getRandomImg(trashcanImages);
+  }
+  super(x, y, 7, img, 15, 0.9, 0, 4, 32, img.width*0.8, 60);
+  this.constrained = false;
   }
 }
 
 class Barrier extends RigidBody {
   constructor(x, y, heading = 0, hitboxWidth = 20, hitboxHeight = 20) {
     
-    super(x, y, 0, new Image(hitboxWidth, hitboxHeight), 1, heading, 0, 0, hitboxWidth, hitboxHeight);
+    super(x, y, 0, new Image(hitboxWidth, hitboxHeight), Infinity, 1, heading, 0, 0, hitboxWidth, hitboxHeight);
     this.fillColor = "blue";
   }
   
@@ -538,7 +648,7 @@ class FloatingObject extends CanvasObject {
 
 class PlayerCar extends RigidBody {
   constructor(x, y, image, heading = 0){
-    super(x, y, 20, image, 1, heading);
+    super(x, y, 5, image, 45 , 1.1, heading);
     this.moveable = true;
     this.fillColor = "red";
     this.startX = x;
@@ -555,13 +665,7 @@ class PlayerCar extends RigidBody {
     }
     super.update();
     this.barrierContact();
-    this.accelerate(0.6);
-  }
-
-  reset(){
-    this.moveTo(this.startX, this.startY);
-    this.rotateTo(this.startHeading);
-    this.velocity = new Victor(0, 0);
+    this.accelerate(0.2);
   }
 
   barrierContact(){
@@ -569,10 +673,13 @@ class PlayerCar extends RigidBody {
     rigidBodies.forEach((rigidBody)=>{
       if(this.collide(rigidBody)){
          rigidBody.fillColor = "lime";
+         
+         
          let collision = this.getMTV(rigidBody);
         if (collision === null) return;
+        rigidBody.onCollision(this);
         this.moveByVector(collision.mtv);
-
+        
         let speed = this.velocity.dot(collision.tangent);
 
         this.velocity = collision.tangent
@@ -580,6 +687,16 @@ class PlayerCar extends RigidBody {
         .multiplyScalar(speed);
 
         this.contactRotation(collision);
+
+        this.velocity.multiplyScalar(0.8);
+        
+        let vn = this.velocity.dot(collision.normal);
+
+      if (vn < 0) {
+      this.velocity.subtract(
+        collision.normal.clone().multiplyScalar(vn)
+          );
+        }
          } else {
           if (rigidBody === this) return;
           rigidBody.fillColor = "blue";
@@ -590,28 +707,10 @@ class PlayerCar extends RigidBody {
   contactRotation(collision){
     let angleDifference = RigidBody.angleDifference(this.heading, Math.abs(collision.tangent.angleDeg()));
     if (Math.abs(angleDifference) < 90) {
-        this.rotateBy(-angleDifference * 0.03 * (this.speed * 0.2));
+        this.rotateBy(-angleDifference * 0.1 * (this.speed * 0.4));
     } else {
-     this.rotateBy(-angleDifference * 0.04 * (this.speed * 0.2)); 
+     this.rotateBy(-angleDifference * 0.04 * (this.speed * 0.4)); 
     }
-  }
-
-  rotateBy(degrees) {
-    this.heading += degrees;
-  }
-
-  rotateTo(degress) {
-    this.heading = degress;
-  }
-
-  moveTo(x, y){
-    this.x = x;
-    this.y = y;
-  }
-
-  moveBy(x, y){
-    this.x += x;
-    this.y += y;
   }
 
   moveForward(units){
@@ -644,6 +743,7 @@ class Background{
     this.backgroundImage = image;
     this.x = backgroundImage.width / 2 * BackgroundScaleFactor;
     this.y = backgroundImage.height / 2 * BackgroundScaleFactor;
+    
   }
 
 
@@ -655,6 +755,8 @@ class Background{
   }
 
   draw(){
+    this.x = backgroundImage.width / 2 * BackgroundScaleFactor;
+    this.y = backgroundImage.height / 2 * BackgroundScaleFactor;
     ctx.drawImage(backgroundImage, this.actualX, this.actualY,  backgroundImage.width*BackgroundScaleFactor, backgroundImage.height*BackgroundScaleFactor);
   }
 }
@@ -696,12 +798,14 @@ class Camera {
     })
 
     canvas.addEventListener("mousemove", (event) => {
+      //console.log("Mouse: ", -(event.offsetX - canvas.width/2 - this.x), -(event.offsetY - canvas.height/2 - this.y));
       if (!drag) return;
       this.x += (event.offsetX - mouseX) * (1/this.zoom); //apply the difference to the camera
       this.y += (event.offsetY - mouseY) * (1/this.zoom);
       this.outOfBoundsCorrection();
         mouseX = event.offsetX; //Reset the last position
         mouseY = event.offsetY;
+    
     })
 
     canvas.addEventListener("mousedown", (event)=>{
@@ -745,13 +849,20 @@ function loop(){
 
 }
 
+let car = null;
+
 async function startGame() {
-  await preloadBillboards();
+  await preloadImages();
   await loadImage("/images/Cars/Black_Car1.png");
 
   new Billboard(320, 320, 30, 90, 220, 60, 60);
-  new Barrier(100, 100, 30, 200, 100)
-
+  new TrashCan(35, 100);
+  car = new PlayerCar(
+    200,
+    200,
+    images[`/images/Cars/${colorArray[0][0]}_Car1.png`], //have to do this weird arrangment so I can load all the images in first
+    115
+  );
   loop();
 }
 
@@ -856,27 +967,8 @@ const colorArray = [
 
 const typeArray = ["Truck", "Racer", "Mustang", "Corvette"];
 
-//--------------------------ImagePreload---------------------------------
-const images = {};
-
-for (let t = 0; t < typeArray.length; t++) {
-    for (const color of colorArray[t]) {
-        const path = `/images/Cars/${color}_Car${t + 1}.png`;
-
-        const img = new Image();
-        img.src = path;
-
-        images[path] = img;
-    }
-}
-
 // Then create the player
-let car = new PlayerCar(
-    0,
-    300,
-    images[`/images/Cars/${colorArray[0][0]}_Car1.png`], //have to do this weird arrangment so I can load all the images in first
-    180
-);
+
 
 //--------------------Car Changer cont.----------------------------------
 RArrowColor.addEventListener("click", () =>{
@@ -967,7 +1059,9 @@ playButton.addEventListener("click", () =>{
 });
 
 restartButton.addEventListener("click", ()=>{
-  car.reset();
+  for (let rigidBody of rigidBodies){
+    rigidBody.reset();
+  }
 });
 
 window.addEventListener("keydown", (event) => {
