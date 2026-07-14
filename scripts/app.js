@@ -1743,7 +1743,7 @@ new Block("=", "oper", false, false, 0, 0, true, new Map(), "bool", 0);
 const panelContainer = document.getElementById("panelContainer");
 const pannelButton = document.getElementById("panelButton");
 const panelArrow = document.getElementById("panelArrow");
-let panelActive = false;
+export let panelActive = false;
 
 pannelButton.addEventListener("click", () => {
   if (panelActive) {

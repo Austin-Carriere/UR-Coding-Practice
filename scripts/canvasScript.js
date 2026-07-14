@@ -1,5 +1,5 @@
 import { Point, Segment, Polygon} from "https://cdn.jsdelivr.net/npm/@flatten-js/core/+esm";
-
+import {panelActive} from "/scripts/app.js";
 import Victor from "https://cdn.jsdelivr.net/npm/victor@1.1.0/+esm";
 
 const canvas = document.querySelector(".canvasPopup");
@@ -17,6 +17,8 @@ let debugMode = true; //If true, will show hitboxes and other debug info
 //-------------------Enviorment Asset Loader-------------------------
 let billboardImages = [];
 let trashcanImages = [];
+let trafficLightImages = [];
+let thinBuildings = [];
 let images = {};
 async function preloadImages() {
   let promises = [];
@@ -37,7 +39,7 @@ async function preloadImages() {
   }
 
   trashcanImages = await Promise.all(promises);
-  promises = [];
+  
 
  
 
@@ -47,9 +49,25 @@ async function preloadImages() {
         images[path] = await loadImage(path);
     }
 }
-  
-}
+    promises = [];
+    for (let i = 1; i<=14; i++){
+      promises.push(
+        loadImage(`/images/Enviorment Assets/Traffic Lights/TrafficLight${i}.png`)
+      );
+    }
 
+    trafficLightImages = await Promise.all(promises);
+
+    promises = [];
+
+    for (let i = 1; i <= 7; i++){
+      promises.push(
+        loadImage(`/images/Enviorment Assets/Buildings/Thin Buildings/Building${i}.png`)
+      );
+      console.log(`/images/Enviorment Assets/Buildings/Thin Buildings/Building${i}.png`);
+    }
+    thinBuildings = await Promise.all(promises);
+};
 
 
 const levelSelectorButton = document.getElementById("levelSelectorButton");
@@ -57,7 +75,7 @@ const playButton = document.getElementById("playButton");
 const restartButton = document.getElementById("restartButton");
 const playButtonImg = document.querySelector("#playButton img");
 
-let panelActive = false
+let overlayActive = false
 
 let canvasObjects = []; //Store one copy of everything on the canvas
 
@@ -170,7 +188,7 @@ class CanvasObject {
     this.width = image.width * scale;
     this.height = image.height * scale;
     this.heading = heading;
-    
+    CanvasObject.sortCanvasObjects();
   }
 
   update() {
@@ -461,8 +479,7 @@ class RigidBody extends ConcreteObject {
     if (this.collisionImmunity > 0) return;
 
     this.collisionImmunity += 30;
-    this.velocity.multiplyScalar(collider.mass/this.mass).add(collider.velocity.clone());
-
+    this.velocity.add(collider.velocity.clone()).multiplyScalar(collider.mass/this.mass).multiplyScalar(0.8);
     collider.velocity.multiplyScalar(this.mass/collider.mass);
     this.velocity.rotate(toRadians(randomNum * 80 - 40));
   }
@@ -600,14 +617,14 @@ return {
 }
 
 class Billboard extends RigidBody {
-  constructor(x, y, z, forceCostume = null) {
+  constructor(x, y, forceCostume = null) {
     let img = null;
      if (forceCostume !== null && billboardImages[forceCostume]) {
     img = billboardImages[forceCostume];
   } else {
     img = getRandomImg(billboardImages);
   }
-    super(x, y, z, img, 400, 1, 0, 90, 220, 60, 60);
+    super(x, y, 25, img, 1400, 1.4, 0, 133, 300, 50, 65);
   }
 }
 
@@ -619,8 +636,89 @@ class TrashCan extends RigidBody {
   } else {
     img = getRandomImg(trashcanImages);
   }
-  super(x, y, 7, img, 15, 0.9, 0, 4, 32, img.width*0.8, 60);
+  super(x, y, 7, img, 25, 0.9, 0, 4, 32, img.width*0.8, 60);
   this.constrained = false;
+  }
+}
+  const redTime = 300;
+  const yellowTime = 50;
+  const greenTime = 250;
+
+class TrafficLight extends RigidBody{
+  constructor(x, y, forceCostume = null){
+    let img = null;
+     if (forceCostume !== null && trafficLightImages[forceCostume]) {
+    img = trafficLightImages[forceCostume];
+  } else {
+    img = getRandomImg(trafficLightImages);
+  }
+  let xOffset = 0
+  if (forceCostume >= 10 && forceCostume <= 12) xOffset = 115;
+
+  super(x, y, 20, img, 250, 0.8, 0, 8 + xOffset, 125, 30, img.height*0.34);
+  this.costumeOffset = 0;
+  if ((forceCostume >=1 && forceCostume <=3) || (forceCostume >= 7 && forceCostume <= 12) ){
+    this.changeLights = true;
+    if (forceCostume>= 7 && forceCostume <=9){
+      this.costumeOffset = 6;
+    } else if (forceCostume >= 10) {
+      this.costumeOffset = 9;
+    }
+    this.lightColor = forceCostume-this.costumeOffset;
+    
+  } else {
+    this.changeLights = false;
+  }
+
+  this.ticks = 0;
+  }
+  update(){
+    super.update();
+
+    if(!this.changeLights || paused) return;
+
+    if (this.lightColor === 1){
+      this.ticks++;
+       this.image = trafficLightImages[this.costumeOffset];
+      if (this.ticks > redTime) {
+        this.lightColor = 3;
+        this.ticks = 0;
+      } 
+    } else
+
+    if (this.lightColor === 2){
+      this.ticks++;
+      this.image = trafficLightImages[this.costumeOffset+1];
+      if (this.ticks > yellowTime) {
+        this.lightColor = 1;
+        this.ticks = 0;
+      } 
+    } else
+
+      if (this.lightColor === 3){
+      this.ticks++;
+      this.image = trafficLightImages[this.costumeOffset+2];
+      if (this.ticks > greenTime) {
+        this.lightColor = 2;
+        this.ticks = 0;
+      } 
+    }
+  }
+}
+
+class ThinBuildingArray {
+  constructor(x, y, amount, space = 2){
+    for (let i = 0; i < amount; i++){
+     new ThinBuilding((x - 403*i - space*i), y); 
+    }
+  }
+}
+
+class ThinBuilding extends RigidBody{
+  constructor(x, y){  
+    let img = new Image();
+    img = getRandomImg(thinBuildings);
+    super(x, img.height*0.9 + y, 16, img, 10000, 0.9, 0, 8, img.height*0.715, img.width*.95, img.height*0.2);
   }
 }
 
@@ -798,7 +896,7 @@ class Camera {
     })
 
     canvas.addEventListener("mousemove", (event) => {
-      //console.log("Mouse: ", -(event.offsetX - canvas.width/2 - this.x), -(event.offsetY - canvas.height/2 - this.y));
+     // console.log("Mouse: ", -(event.offsetX - canvas.width/2 - this.x), -(event.offsetY - canvas.height/2 - this.y));
       if (!drag) return;
       this.x += (event.offsetX - mouseX) * (1/this.zoom); //apply the difference to the camera
       this.y += (event.offsetY - mouseY) * (1/this.zoom);
@@ -827,7 +925,7 @@ class Camera {
 const camera = new Camera(10000, 10000);
 let background = new Background(backgroundImage); 
 function loop(){
-  if (panelActive) {
+  if (overlayActive || !panelActive) {
     updateOverlay();
    requestAnimationFrame(loop); //To Pause if Overlay is on
     return;
@@ -844,7 +942,6 @@ function loop(){
     object.update();
   });
   
-  
   requestAnimationFrame(loop);
 
 }
@@ -853,16 +950,17 @@ let car = null;
 
 async function startGame() {
   await preloadImages();
-  await loadImage("/images/Cars/Black_Car1.png");
 
-  new Billboard(320, 320, 30, 90, 220, 60, 60);
-  new TrashCan(35, 100);
+  new Billboard(320, 320);
+  new TrashCan(300, 40);
   car = new PlayerCar(
-    200,
-    200,
+    500,
+    40,
     images[`/images/Cars/${colorArray[0][0]}_Car1.png`], //have to do this weird arrangment so I can load all the images in first
-    115
+    90
   );
+  new TrafficLight(532, 500, 1);
+  new ThinBuildingArray(-315, 180, 5 , 10);
   loop();
 }
 
@@ -917,7 +1015,7 @@ const levelSelectorMenu = document.getElementById("levelSelector");
  
 function updateOverlay(){
   disableAllOverlays();
-  if (panelActive){
+  if (overlayActive){
     panelOverlay.style.width = canvas.width + "px" ;
   } else {
     panelOverlay.style.width = 0;
@@ -1023,16 +1121,16 @@ function updateCarPreview(){
 
 confirmButton.addEventListener("click", ()=> {
   car.changeImage(`/images/Cars/${colorArray[typeIndex][colorIndex]}_Car${typeIndex+1}.png`);
-  panelActive = false;
+  overlayActive = false;
   updateOverlay();
 });
 updateCarPreview();
 
 carChangerButton.addEventListener("click", ()=>{
   if (overlayNum === 1){
-    panelActive = !panelActive;
+    overlayActive = !overlayActive;
   } else {
-    panelActive = true;
+    overlayActive = true;
     overlayNum = 1;
   }
   updateOverlay();
@@ -1040,9 +1138,9 @@ carChangerButton.addEventListener("click", ()=>{
 
 levelSelectorButton.addEventListener("click", ()=>{
   if (overlayNum === 2){
-    panelActive = !panelActive;
+    overlayActive = !overlayActive;
   } else {
-    panelActive = true;
+    overlayActive = true;
     overlayNum = 2;
   }
   updateOverlay();

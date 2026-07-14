@@ -355,6 +355,7 @@ border: #181a2a 5px solid;
   transform: translateX(5.1px);
   border: none;
   width: 70px;
+  min-width: 70px;
   height: 90px;
   overflow: hidden;
   text-align: center;
@@ -373,6 +374,7 @@ border: #181a2a 5px solid;
 .arrowPopup {
   display: block;
   width: 100%;
+  min-width: 49px;
   height: 100%;
   animation: arrowSwitchBack 300ms ease-in forwards;
 }
