@@ -64,7 +64,6 @@ async function preloadImages() {
       promises.push(
         loadImage(`/images/Enviorment Assets/Buildings/Thin Buildings/Building${i}.png`)
       );
-      console.log(`/images/Enviorment Assets/Buildings/Thin Buildings/Building${i}.png`);
     }
     thinBuildings = await Promise.all(promises);
 };
@@ -76,100 +75,62 @@ const restartButton = document.getElementById("restartButton");
 const playButtonImg = document.querySelector("#playButton img");
 
 let overlayActive = false
+let lvlNumber = 1;
+
 
 let canvasObjects = []; //Store one copy of everything on the canvas
-
-class Triangle {
-  constructor(triangle){
-    this.triangle = triangle
-    this.b = triangle.vertices[0];
-    this.c = triangle.vertices[1];
-    this.a = triangle.vertices[2];
-
-    this.A = Math.sqrt(Math.pow(this.b.x - this.a.x, 2) + Math.pow(this.b.y - this.a.y, 2));
-    this.B = Math.sqrt(Math.pow(this.c.x - this.b.x, 2) + Math.pow(this.c.y - this.b.y, 2));
-    this.C = Math.sqrt(Math.pow(this.a.x - this.c.x, 2) + Math.pow(this.a.y - this.c.y, 2));
-
-    this.angleA = toDegrees(Math.acos((Math.pow(this.B, 2) + Math.pow(this.C, 2) - Math.pow(this.A, 2)) / (2 * this.B * this.C)));
-    this.angleB = toDegrees(Math.acos((Math.pow(this.A, 2) + Math.pow(this.C, 2) - Math.pow(this.B, 2)) / (2 * this.A * this.C)));
-    this.angleC = toDegrees(Math.acos((Math.pow(this.A, 2) + Math.pow(this.B, 2) - Math.pow(this.C, 2)) / (2 * this.A * this.B)));
-
-    this.rightAngleVertex = this.findRightAngleVertex();
-
-    this.altitude = this.findLegsProduct() / this.findHypotenuse();
-
-    this.altitudeIntersectionPoint = new Point(this.findAltitudeIntersectionPointX(), this.findAltitudeIntersectionPointY());
+let levels = [];
+class Level{
+  constructor(backgroundImage, title, description, preview){
+    levels.push(this);
+    this.backgroundImage = backgroundImage;
+    this.title = title;
+    this.description = description;
+    this.lvlNum = levels.indexOf(this) + 1;
+    this.objectList = [];
+    this.preview = preview;
+    this.stars = [0,0,0];
+    this.element = this.createElement();
+    
+    
   }
 
-  findRightAngleVertex(){
-    if (this.angleA === 90) {
-      return this.a;
-    } else if (this.angleB === 90) {
-      return this.b;
-    } else if (this.angleC === 90) {
-      return this.c;
-    } else {
-      throw new Error("No right angle found in the triangle.");
+  activate(){
+    lvlNumber = this.lvlNum;
+    canvasObjects = [];
+    rigidBodies = [];
+    canvasObjects = this.objectList;
+    for (let object of this.objectList){
+      if (object instanceof RigidBody) rigidBodies.push(object);
     }
   }
 
-  findLegsProduct(){
-    var leg1, leg2;
-    if (this.rightAngleVertex === this.b) {
-      leg1 = this.C;
-      leg2 = this.A;
-    } else if (this.rightAngleVertex === this.c) {
-      leg1 = this.A;
-      leg2 = this.B;
-    } else if (this.rightAngleVertex === this.a) {
-      leg1 = this.C;
-      leg2 = this.B;
-    }
-
-    return leg1 * leg2;
-
-
+  addObjects(array){
+    this.objectList.push(...array);
+    return this;
   }
 
-  findHypotenuse(){
-    if (this.rightAngleVertex === this.b) {
-      return this.B;
-    } else if (this.rightAngleVertex === this.c) {
-      return this.C;
-    } else if (this.rightAngleVertex === this.a) {
-      return this.A;
-    }
-  }
+  updateStars(){}
 
-  findAltitudeIntersectionPointX(){
-    if (this.rightAngleVertex === this.a) {
-      return ((Math.pow(this.B, 2) * this.b.x) + (Math.pow(this.C, 2) + this.c.x)) / Math.pow(this.A, 2);
-    } else if (this.rightAngleVertex === this.b) {
-      return ((Math.pow(this.A, 2) * this.a.x) + (Math.pow(this.C, 2) + this.c.x)) / Math.pow(this.B, 2);
-    } else if (this.rightAngleVertex === this.c) {
-      return ((Math.pow(this.A, 2) * this.a.x) + (Math.pow(this.B, 2) + this.b.x)) / Math.pow(this.C, 2);
-    }
+  createElement(){
+    let template = document.querySelector(".LevelModuleTemplate");
+    const module = template.content.cloneNode(true).querySelector(".LevelModule");
+    const lvlNum = module.querySelector(".LevelModuleLvlNum");
+    const title = module.querySelector(".LevelModuleTitle");
+    const preview = module.querySelector(".LevelPreview img");
+    const stars = module.querySelectorAll(".starContainer img");
+    const levelContainer = document.querySelector(".levelsContainer");
+    console.log(this.preview);
+    title.textContent = this.title;
+    lvlNum.textContent = this.lvlNum;
+    preview.setAttribute("src", this.preview.src);
+    this.starsImage = stars;
+    levelContainer.append(module);
+    return module;
   }
-
-  findAltitudeIntersectionPointY(){
-    if (this.rightAngleVertex === this.a) {
-      return ((Math.pow(this.B, 2) * this.b.y) + (Math.pow(this.C, 2) + this.c.y)) / Math.pow(this.A, 2);
-    } else if (this.rightAngleVertex === this.b) {
-      return ((Math.pow(this.A, 2) * this.a.y) + (Math.pow(this.C, 2) + this.c.y)) / Math.pow(this.B, 2);
-    } else if (this.rightAngleVertex === this.c) {
-      return ((Math.pow(this.A, 2) * this.a.y) + (Math.pow(this.B, 2) + this.b.y)) / Math.pow(this.C, 2);
-    }
-  }
-
-  get OffsetX(){
-    return this.altitudeIntersectionPoint.x - this.rightAngleVertex.x;
-  }
-
-  get OffsetY(){
-    return this.altitudeIntersectionPoint.y - this.rightAngleVertex.y;
-  }
-
 }
+
+
 
 class CanvasObject {
   //abstract
@@ -178,7 +139,6 @@ class CanvasObject {
       //Make sure you cannot create an instance of this class
       throw new Error("Cannot instantiate an abstract class directly.");
     }
-    canvasObjects.push(this);
 
     this.x = x;
     this.y = y;
@@ -260,7 +220,7 @@ class ConcreteObject extends CanvasObject {
     this.hitboxWidth = hitboxWidth * scale;
     this.hitboxHeight = hitboxHeight * scale; 
     this.hitboxOffset = new Victor(hitboxXOffset, hitboxYOffset);
-    this.fillColor = "red"
+    this.fillColor = "red";
     this.hitbox = this.updatePolygonPos();
   }
 
@@ -374,7 +334,6 @@ class RigidBody extends ConcreteObject {
      this.startX = x;
     this.startY = y;
     this.startHeading = heading;
-    rigidBodies.push(this);
     this.velocity = new Victor(0, 0);
     this.collisionImmunity =0;
     this.constrained = true;
@@ -708,9 +667,14 @@ class TrafficLight extends RigidBody{
 
 class ThinBuildingArray {
   constructor(x, y, amount, space = 2){
+    this.buildings = []
     for (let i = 0; i < amount; i++){
-     new ThinBuilding((x - 403*i - space*i), y); 
+     this.buildings.push(new ThinBuilding((x - 403*i - space*i), y)); 
     }
+  }
+
+  getThinBuildings(){
+    return this.buildings;
   }
 }
 
@@ -742,8 +706,6 @@ class FloatingObject extends CanvasObject {
 
 }
 
-
-
 class PlayerCar extends RigidBody {
   constructor(x, y, image, heading = 0){
     super(x, y, 5, image, 45 , 1.1, heading);
@@ -763,7 +725,7 @@ class PlayerCar extends RigidBody {
     }
     super.update();
     this.barrierContact();
-    this.accelerate(0.2);
+    this.setSpeed(1);
   }
 
   barrierContact(){
@@ -787,14 +749,7 @@ class PlayerCar extends RigidBody {
         this.contactRotation(collision);
 
         this.velocity.multiplyScalar(0.8);
-        
-        let vn = this.velocity.dot(collision.normal);
-
-      if (vn < 0) {
-      this.velocity.subtract(
-        collision.normal.clone().multiplyScalar(vn)
-          );
-        }
+      
          } else {
           if (rigidBody === this) return;
           rigidBody.fillColor = "blue";
@@ -871,6 +826,15 @@ class Camera {
     this.borderY = borderY;
     this.zoom = 1;
     this.onCreation();
+    this.dx = 0;
+    this.dy = 0;
+  }
+
+  update(){
+    this.x += this.dx;
+    this.dx = 0;
+    this.y += this.dy;
+    this.dy = 0;
   }
 
   outOfBoundsCorrection(){
@@ -898,8 +862,8 @@ class Camera {
     canvas.addEventListener("mousemove", (event) => {
      // console.log("Mouse: ", -(event.offsetX - canvas.width/2 - this.x), -(event.offsetY - canvas.height/2 - this.y));
       if (!drag) return;
-      this.x += (event.offsetX - mouseX) * (1/this.zoom); //apply the difference to the camera
-      this.y += (event.offsetY - mouseY) * (1/this.zoom);
+      this.dx += (event.offsetX - mouseX) * (1/this.zoom); //apply the difference to the camera
+      this.dy += (event.offsetY - mouseY) * (1/this.zoom);
       this.outOfBoundsCorrection();
         mouseX = event.offsetX; //Reset the last position
         mouseY = event.offsetY;
@@ -922,6 +886,7 @@ class Camera {
 
   
 }
+
 const camera = new Camera(10000, 10000);
 let background = new Background(backgroundImage); 
 function loop(){
@@ -937,6 +902,7 @@ function loop(){
     ctx.translate(canvas.width / 2, canvas.height / 2); // set center to (0,0)
 
     ctx.scale(camera.zoom, camera.zoom);
+    camera.update();
     background.draw();
   canvasObjects.forEach((object) => {
     object.update();
@@ -948,19 +914,28 @@ function loop(){
 
 let car = null;
 
+
+
 async function startGame() {
   await preloadImages();
+    new Level(backgroundImage, "Test", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
+    new Level(backgroundImage, "Test2", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
+ new Level(backgroundImage, "Test3", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
+   new Level(backgroundImage, "Test4", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
+ new Level(backgroundImage, "Test5", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
+   new Level(backgroundImage, "Test5", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
+   new Level(backgroundImage, "Test5", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
+   new Level(backgroundImage, "Test5", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
+   new Level(backgroundImage, "Test5", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
+new Level(backgroundImage, "Test5", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
 
-  new Billboard(320, 320);
-  new TrashCan(300, 40);
   car = new PlayerCar(
     500,
     40,
     images[`/images/Cars/${colorArray[0][0]}_Car1.png`], //have to do this weird arrangment so I can load all the images in first
     90
   );
-  new TrafficLight(532, 500, 1);
-  new ThinBuildingArray(-315, 180, 5 , 10);
+  levels[0].activate();
   loop();
 }
 
@@ -1022,8 +997,14 @@ function updateOverlay(){
   }
   if (overlayNum === 1){
     carChangeMenu.style.width = "";
+    carChangeMenu.style.height = "";
+    levelSelectorMenu.style.width = "0";
+    levelSelectorMenu.style.height = "0";
   } else if(overlayNum === 2){
     levelSelectorMenu.style.width = "";
+    levelSelectorMenu.style.height = "";
+    carChangeMenu.style.width = "0";
+    carChangeMenu.style.height = "0";
   }
 
 
