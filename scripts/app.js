@@ -13,7 +13,7 @@ const codeSection = document.getElementById("codesections");
 const blockBank = document.getElementById("blockBank");
 const blockBankTitle = document.getElementById("blockBankTitle");
 const blockBankContent = document.getElementById("blockBankContent");
-
+const blockCounter = document.querySelector(".blockCounter");
 const canvas = document.getElementById("canvas");
 
 let selectedSec = false;
@@ -751,6 +751,7 @@ class Block {
         if (index !== -1) {
           blocks.splice(index, 1);
         }
+        blockCounter.textContent = `${blocks.length} blocks`;
       },
       { once: true },
     );
@@ -777,9 +778,11 @@ class Block {
         if (index !== -1) {
           blocks.splice(index, 1);
         }
+        blockCounter.textContent = `${blocks.length} blocks`;
       },
       { once: true },
     );
+    
   }
 
   static deselect() {
@@ -1290,6 +1293,7 @@ class Block {
     } else {
       block.style.position = "absolute";
       blocks.push(this);
+      blockCounter.textContent = `${blocks.length} blocks`;
       block.style.left = this.x + "px";
       block.style.top = this.y + "px";
       block.style.zIndex = highestBlockLayer;
@@ -1757,3 +1761,5 @@ pannelButton.addEventListener("click", () => {
     panelActive = true;
   }
 });
+
+blockCounter.textContent = `${blocks.length} blocks`;

@@ -11,6 +11,8 @@ let backgroundImage = new Image();
 backgroundImage.src = "/images/Enviorment Assets/Backgrounds/Background 1.png";
 let paused = false;
 const BackgroundScaleFactor = 0.242;
+let currentLvl = 1;
+let maxLvl = 1;
 
 let debugMode = true; //If true, will show hitboxes and other debug info
 
@@ -75,13 +77,12 @@ const restartButton = document.getElementById("restartButton");
 const playButtonImg = document.querySelector("#playButton img");
 
 let overlayActive = false
-let lvlNumber = 1;
 
 
 let canvasObjects = []; //Store one copy of everything on the canvas
 let levels = [];
 class Level{
-  constructor(backgroundImage, title, description, preview){
+  constructor(backgroundImage, title, description, preview, carStartPoint, heading = 0){
     levels.push(this);
     this.backgroundImage = backgroundImage;
     this.title = title;
@@ -91,18 +92,26 @@ class Level{
     this.preview = preview;
     this.stars = [0,0,0];
     this.element = this.createElement();
-    
-    
+    this.carStartPoint = carStartPoint;
+    this.carStartHeading = heading;
   }
 
   activate(){
-    lvlNumber = this.lvlNum;
+    currentLvl = this.lvlNum;
     canvasObjects = [];
     rigidBodies = [];
     canvasObjects = this.objectList;
     for (let object of this.objectList){
       if (object instanceof RigidBody) rigidBodies.push(object);
     }
+    car.onLevelStart(this.carStartPoint, this.carStartHeading);
+  }
+
+  editStars(array){
+    for (let i=0; i < this.stars.length; i++){
+       this.stars[i] = array[i];
+    }
+    this.updateStars();
   }
 
   addObjects(array){
@@ -110,7 +119,15 @@ class Level{
     return this;
   }
 
-  updateStars(){}
+  updateStars(){
+    for(let i = 0; i < this.stars.length; i++){
+      if (this.stars[i] === 1) {
+        this.starsImage[i].src = "/images/Star Full.png";
+      } else {
+        this.starsImage[i].src = "/images/Star Empty.png";
+      }
+    }
+  }
 
   createElement(){
     let template = document.querySelector(".LevelModuleTemplate");
@@ -120,12 +137,23 @@ class Level{
     const preview = module.querySelector(".LevelPreview img");
     const stars = module.querySelectorAll(".starContainer img");
     const levelContainer = document.querySelector(".levelsContainer");
-    console.log(this.preview);
     title.textContent = this.title;
     lvlNum.textContent = this.lvlNum;
     preview.setAttribute("src", this.preview.src);
     this.starsImage = stars;
     levelContainer.append(module);
+
+    if (maxLvl < this.lvlNum){
+      module.classList.add("locked");
+    }
+
+    module.addEventListener("click", ()=>{
+      if (module.classList.contains("locked")) return;
+      this.activate();
+      overlayActive = false;
+      updateOverlay();
+    });
+    this.updateStars();
     return module;
   }
 }
@@ -338,6 +366,7 @@ class RigidBody extends ConcreteObject {
     this.collisionImmunity =0;
     this.constrained = true;
     this.mass = mass;
+    this.fillColor = "blue";
     }
 
     reset(){
@@ -714,6 +743,19 @@ class PlayerCar extends RigidBody {
     this.startX = x;
     this.startY = y;
     this.startHeading = heading;
+    console.log("Created");
+    
+  }
+
+  onLevelStart(point, heading){
+    canvasObjects.push(this);
+    rigidBodies.push(this);
+    this.moveTo(point.x, point.y);
+    this.rotateTo(heading);
+    this.startX = point.x;
+    this.startY = point.y;
+    this.startHeading = heading;
+    camera.setPos(this.x, this.y);
   }
 
   update(){
@@ -725,7 +767,6 @@ class PlayerCar extends RigidBody {
     }
     super.update();
     this.barrierContact();
-    this.setSpeed(1);
   }
 
   barrierContact(){
@@ -837,6 +878,11 @@ class Camera {
     this.dy = 0;
   }
 
+  setPos(x, y){
+    this.x = x;
+    this.y = y;
+  }
+
   outOfBoundsCorrection(){
     if (Math.abs(this.x) > this.borderX){
       this.x = Math.min(this.borderX, Math.max(-this.borderX, this.x));
@@ -918,24 +964,16 @@ let car = null;
 
 async function startGame() {
   await preloadImages();
-    new Level(backgroundImage, "Test", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
-    new Level(backgroundImage, "Test2", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
- new Level(backgroundImage, "Test3", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
-   new Level(backgroundImage, "Test4", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
- new Level(backgroundImage, "Test5", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
-   new Level(backgroundImage, "Test5", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
-   new Level(backgroundImage, "Test5", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
-   new Level(backgroundImage, "Test5", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
-   new Level(backgroundImage, "Test5", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
-new Level(backgroundImage, "Test5", "This is a test Level", backgroundImage).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
-
-  car = new PlayerCar(
+    new Level(backgroundImage, "Test", "This is a test Level", backgroundImage, new Point(500, 320), 90).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings)).editStars(new Array(1,0,1));
+    new Level(backgroundImage, "Test2", "This is a test Level", backgroundImage, new Point(-320, 0)).addObjects(new Array(new Billboard(320, 320), new Billboard(500, 320), new Billboard(320, 500)));
+  
+    car = new PlayerCar(
     500,
     40,
     images[`/images/Cars/${colorArray[0][0]}_Car1.png`], //have to do this weird arrangment so I can load all the images in first
     90
   );
-  levels[0].activate();
+  levels[currentLvl-1].activate();
   loop();
 }
 

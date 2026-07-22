@@ -15,6 +15,7 @@
       href="https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap"
       rel="stylesheet"
     />
+    <link href="https://fonts.googleapis.com/css2?family=DynaPuff:wght@400..700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Jersey+10&display=swap" rel="stylesheet">
     <script type="module" defer src="scripts/app.js"></script>
     <script type="module" defer src="scripts/canvasScript.js"></script>
@@ -69,6 +70,7 @@
             <div id="blockBankContent" class="blockBankContent"></div>
           </div>
         </div>
+        <div class="blockCounter">5 blocks</div>
       </div>
       <div class="main">
         <div id="canvas" class="canvas">
@@ -625,7 +627,7 @@
     </template>
 
     <template class="LevelModuleTemplate" id = "LevelModuleTemplate">
-      <div class="LevelModule">
+      <button class="LevelModule">
                     <div class="LevelModuleTitleNumContainer">
                       <div class="LevelModuleLvlNum">1</div>
                      <div class="LevelModuleTitle">Title</div> 
@@ -641,7 +643,7 @@
                         <img src="/images/Star Empty.png">
                       </div>
                     </div>
-                  </div>
+                  </button>
     </template>
   </body>
 </html>

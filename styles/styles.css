@@ -9,6 +9,11 @@
   display: flex;
   min-height: 100vh;
 }
+
+body{
+  
+}
+
 .codespace {
   display: flex;
   flex-direction: column;
@@ -19,6 +24,7 @@
   width: 28vw;
   background: #282f44;
   border-right: 3px #e6af2e solid;
+  height: 100vh;
 }
 .ToolBox {
   display: block;
@@ -33,6 +39,7 @@
   background-image: linear-gradient(45deg, #282f44, #333c4a);
   min-width: 15em;
   flex: 1;
+  height: 100vh;
 }
 .header {
   display: flex;
@@ -67,10 +74,12 @@ body {
   width: 100%;
   display: flex;
   flex-direction: column;
+
 }
+
 .codeBank {
   display: flex;
-  height: 100%;
+  height: 63%;
   width: 100%;
 }
 
@@ -118,6 +127,15 @@ body {
   border-bottom: #e6af2e solid 5px;
 }
 
+.blockCounter{
+  width: 100%;
+  text-align: center;
+  font-size: 50px;
+  color: whitesmoke;
+  font-family: "DynaPuff", "sans-serif";
+  border-top: #e6af2e 5px solid;
+}
+
 .sidePanel {
   width: 0;
   height: 0;
@@ -128,9 +146,9 @@ body {
 .panelContainer {
   position: absolute;
   z-index: 100000000000000000000000000000000;
-  transform: translate(-70px, 6%);
+  transform: translate(-71px, 3%);
   display: flex;
-  width: 65vw;
+  width: 1000px;
   height: 90vh;
   flex-direction: row;
   text-align: left;
@@ -139,7 +157,7 @@ body {
 }
 
 .panelContainer.active {
-  transform: translate(-65vw, 6%);
+  transform: translate(-1000px, 3%);
 }
 
 .panel {
@@ -344,7 +362,7 @@ border: #181a2a 5px solid;
 }
 
 .LevelModule{
-  transition: all 300ms ease-in;
+   transition: transform 300ms ease-in, box-shadow 300ms ease-in;
   width: 180px;
   height: 180px;
   background-color: rgb(37, 49, 75);
@@ -356,16 +374,29 @@ border: #181a2a 5px solid;
   justify-content: center;
   background-image: linear-gradient(325deg, rgb(56, 68, 95), rgb(29, 43, 73));
   box-shadow: #00000061 -15px 15px 20px;
+  padding: 0;
+  color: whitesmoke;
+}
+
+.locked{
+  cursor: not-allowed;
+  border-color: gray;
+  color: lightgray;
+}
+
+.locked:active{
+  border-color: red;
 }
 
 .LevelModuleTitleNumContainer{
   height: 23%;
   border-bottom: #e6af2e 4px solid;
+  border-color: inherit;
   display: flex;
   flex-direction: row;
   font-size: 40px;
   text-align: center;
-  color: whitesmoke;
+  color: inherit;
   font-family: "Jersey 10";
     
 }
@@ -388,6 +419,8 @@ border: #181a2a 5px solid;
   height: 100%;
   padding-left: 2%;
   border-right: #e6af2e 4px solid;
+  border-color: inherit;
+  color: inherit;
 }
 
 .LevelModuleTitle{
@@ -399,6 +432,7 @@ border: #181a2a 5px solid;
   flex: 1;
   display: flex;
   flex-direction: row;
+  border-color: inherit;
 }
 
 .LevelPreview {
@@ -419,6 +453,7 @@ border: #181a2a 5px solid;
 .starContainer{
   flex: 1;
   border-left: #e6af2e 4px solid;
+  border-color: inherit;
   padding-top: 5px;
 }
 
@@ -522,7 +557,7 @@ border: #181a2a 5px solid;
 .codesectionbutton {
   width: 100%;
   border: none;
-  height: 15%;
+  height: 20%;
   text-align: center;
   background: #4b4c67;
   color: whitesmoke;
