@@ -32,18 +32,19 @@ body{
 }
 .main {
   display: flex;
-  justify-content: center;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: normal;
+
   background: #333c4a;
   background-image: linear-gradient(45deg, #282f44, #333c4a);
   min-width: 15em;
   flex: 1;
-  height: 100vh;
+  height: 92vh;
 }
 .header {
   display: flex;
-  height: 4em;
+  height: 8vh;
   text-align: right;
   align-items: center;
   background-image: linear-gradient(to right, #282f44 15%, #494964);
@@ -63,24 +64,12 @@ html {
 }
 body {
   margin: 0px;
-  overflow-x: hidden;
+  overflow: hidden
 }
 .header img:hover {
   transform: translate(0, -2px);
   transform: scale(1.2);
   background-image: radial-gradient(#f5d061 10%, #282f4400 68%);
-}
-.codesections {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-
-}
-
-.codeBank {
-  display: flex;
-  height: 63%;
-  width: 100%;
 }
 
 .blockBank {
@@ -115,6 +104,24 @@ body {
   overflow: hidden;
   user-select: none;
 }
+
+.blocklyToolbox {
+    width: 240px
+}
+
+.blocklyToolboxCategory{
+  height: 50px;
+}
+
+.blocklyToolboxCategoryLabel{
+  font-size: 40px;
+  font-family: "Passero One";
+}
+
+.blocklyToolbox{
+  border-right: 4px solid #e6af2e;
+}
+
 .ToolBox {
   color: #ececec;
   font-family: "Passero One", sans-serif;
@@ -145,8 +152,8 @@ body {
 
 .panelContainer {
   position: absolute;
-  z-index: 100000000000000000000000000000000;
-  transform: translate(-71px, 3%);
+  z-index: 1000000000;
+  transform: translate(-71px, 5px);
   display: flex;
   width: 1000px;
   height: 90vh;
@@ -157,7 +164,7 @@ body {
 }
 
 .panelContainer.active {
-  transform: translate(-1000px, 3%);
+  transform: translate(-1000px, 5px);
 }
 
 .panel {
@@ -539,128 +546,4 @@ border: #181a2a 5px solid;
 
 .arrowPopup.active {
   animation: arrowSwitch 300ms ease-in forwards;
-}
-
-.codesectionbutton img {
-  display: inline;
-  width: 40px;
-}
-.codesectionbutton:hover {
-  background: #737555;
-  width: 110%;
-}
-
-.codesectionbutton:focus {
-  outline: none;
-}
-
-.codesectionbutton {
-  width: 100%;
-  border: none;
-  height: 20%;
-  text-align: center;
-  background: #4b4c67;
-  color: whitesmoke;
-  font-family: "Passero One", sans-serif;
-  font-size: 30px;
-}
-@media screen and (width <= 443px) {
-  .codesectionbutton {
-    width: 100%;
-    border: none;
-    height: 15%;
-    text-align: center;
-    background: #4b4c67;
-    color: whitesmoke;
-    font-family: "Passero One", sans-serif;
-    font-size: 13px;
-  }
-}
-
-@keyframes blockAppear {
-  from {
-    transform: translateY(-40px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.template {
-  animation: blockAppear 300ms ease-out 0s 1 normal forwards;
-}
-
-@keyframes deleteBlock {
-  from {
-    transform: scale(1);
-    opacity: 1;
-  }
-  to {
-    transform: scale(0.1);
-    opacity: 0;
-  }
-}
-
-.delete {
-  animation: deleteBlock 100ms ease-in forwards;
-}
-
-@keyframes deleteBlockRipple {
-  from {
-    transform: scale(1);
-    opacity: 1;
-  }
-  to {
-    transform: scale(0.1);
-    opacity: 0;
-    transform: translate(25px, 0);
-  }
-}
-
-.deleteRipple {
-  animation: deleteBlockRipple 75ms ease-in forwards;
-}
-
-.blockBankContent {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 10px;
-
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.blockSvg {
-  max-width: 180px;
-  min-width: 140px;
-  width: 100%;
-  transition: transform 200ms ease-in-out;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.blockSvg--int {
-  max-width: 70px;
-  min-width: 70px;
-  width: 70px;
-}
-
-.blockSvg--bool {
-  max-width: 90px;
-  min-width: 90px;
-  width: 90px;
-}
-
-.blockSvg * {
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.blockBankContent::-webkit-scrollbar {
-  width: 0px;
-  height: 0px;
 }
