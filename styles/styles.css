@@ -40,11 +40,11 @@ body{
   background-image: linear-gradient(45deg, #282f44, #333c4a);
   min-width: 15em;
   flex: 1;
-  height: 92vh;
+  height: 90vh;
 }
 .header {
   display: flex;
-  height: 8vh;
+  height: 10vh;
   text-align: right;
   align-items: center;
   background-image: linear-gradient(to right, #282f44 15%, #494964);
@@ -118,6 +118,7 @@ body {
   font-family: "Passero One";
 }
 
+
 .blocklyToolbox{
   border-right: 4px solid #e6af2e;
 }
@@ -141,6 +142,10 @@ body {
   color: whitesmoke;
   font-family: "DynaPuff", "sans-serif";
   border-top: #e6af2e 5px solid;
+  transform: translateY(-70px);
+  width: 240px;
+  position: absolute;
+  z-index: 100;
 }
 
 .sidePanel {

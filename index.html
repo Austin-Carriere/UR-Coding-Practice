@@ -5,6 +5,14 @@
     <title>Urban Rescue Code Challenge</title>
     <link rel="stylesheet" href="styles/homeStyle.css" />
     <link rel="icon" href="images/urban-rescue-logo.png" />
+      <link
+      href="https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+      rel="stylesheet"
+    />
+    <link href="https://fonts.googleapis.com/css2?family=DynaPuff:wght@400..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Jersey+10&display=swap" rel="stylesheet">
+    <script src="/scripts/levels.js"></script>
+    <script type="module" src="/scripts/homeScript.js"></script>
   </head>
   <body>
     <div class="title">
@@ -12,8 +20,30 @@
       <div class="main">Urban Rescue</div>
       <div class="sub">Code Challenge</div>
     </div>
-    <div class="levelSelection">
-      <a class="playButton" href="workspace.html">PLAY</a>
+    <div class="levelSelectionHome">
     </div>
+    <template class="LevelModuleTemplate" id = "LevelModuleTemplate">
+      <button class="LevelModule">
+                    <div class="LevelModuleTitleNumContainer">
+                      <div class="LevelModuleLvlNum">1</div>
+                     <div class="LevelModuleTitle">Title</div> 
+                    </div>
+                    <div class="LevelModuleImgStarContainer">
+                      <div class="LevelPreview">
+                        <img src="/images/urban-rescue-logo.png"></img>
+                      </div>
+                      <div class="description">
+                        
+                      </div>
+                      <div class="starContainer">
+                        <img src="/images/Star Empty.png">
+                        <img src="/images/Star Empty.png">
+                        <img src="/images/Star Empty.png">
+                      </div>
+                    </div>
+                  </button>
+    </template>
+
   </body>
-</html>
+
+   </html>

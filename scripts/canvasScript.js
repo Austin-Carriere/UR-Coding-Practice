@@ -6,15 +6,15 @@ const canvas = document.querySelector(".canvasPopup");
 const panel = document.querySelector(".panel")
 const ctx = canvas.getContext("2d");
 const panelOverlay = document.querySelector(".canvasOverlay");
+const levelContainer = document.querySelector(".levelsContainer");
 let overlayNum = 1;
 let backgroundImage = new Image();
 backgroundImage.src = "/images/Enviorment Assets/Backgrounds/Background 1.png";
+
 let paused = false;
 const BackgroundScaleFactor = 0.242;
-let currentLvl = 1;
-let maxLvl = 1;
 
-let debugMode = true; //If true, will show hitboxes and other debug info
+let debugMode = false; //If true, will show hitboxes and other debug info
 
 //-------------------Enviorment Asset Loader-------------------------
 let billboardImages = [];
@@ -76,11 +76,6 @@ const playButton = document.getElementById("playButton");
 const restartButton = document.getElementById("restartButton");
 const playButtonImg = document.querySelector("#playButton img");
 
-let overlayActive = false
-
-
-let canvasObjects = []; //Store one copy of everything on the canvas
-let levels = [];
 class Level{
   constructor(backgroundImage, title, description, preview, carStartPoint, heading = 0){
     levels.push(this);
@@ -96,16 +91,7 @@ class Level{
     this.carStartHeading = heading;
   }
 
-  activate(){
-    currentLvl = this.lvlNum;
-    canvasObjects = [];
-    rigidBodies = [];
-    canvasObjects = this.objectList;
-    for (let object of this.objectList){
-      if (object instanceof RigidBody) rigidBodies.push(object);
-    }
-    car.onLevelStart(this.carStartPoint, this.carStartHeading);
-  }
+ 
 
   editStars(array){
     for (let i=0; i < this.stars.length; i++){
@@ -129,6 +115,18 @@ class Level{
     }
   }
 
+   activate(){
+    currentLvl = this.lvlNum;
+    canvasObjects = [];
+    rigidBodies = [];
+    canvasObjects = this.objectList;
+    for (let object of this.objectList){
+      if (object instanceof RigidBody) rigidBodies.push(object);
+    }
+    
+    car.onLevelStart(this.carStartPoint, this.carStartHeading);
+  } 
+
   createElement(){
     let template = document.querySelector(".LevelModuleTemplate");
     const module = template.content.cloneNode(true).querySelector(".LevelModule");
@@ -136,12 +134,11 @@ class Level{
     const title = module.querySelector(".LevelModuleTitle");
     const preview = module.querySelector(".LevelPreview img");
     const stars = module.querySelectorAll(".starContainer img");
-    const levelContainer = document.querySelector(".levelsContainer");
     title.textContent = this.title;
     lvlNum.textContent = this.lvlNum;
     preview.setAttribute("src", this.preview.src);
     this.starsImage = stars;
-    levelContainer.append(module);
+
 
     if (maxLvl < this.lvlNum){
       module.classList.add("locked");
@@ -156,9 +153,12 @@ class Level{
     this.updateStars();
     return module;
   }
+
+  
 }
 
 
+let overlayActive = false
 
 class CanvasObject {
   //abstract
@@ -236,6 +236,8 @@ class CanvasObject {
     this.z = ((percent / 50) * totalZ) / canvasObjects.length;
   }
 }
+let canvasObjects = [CanvasObject]; //Only Objects on the canvas
+
 
 class ConcreteObject extends CanvasObject {
   constructor(x, y, z, image, scale = 1, heading = 0, hitboxXOffset = 0, hitboxYOffset = 0, hitboxWidth = image.width, hitboxHeight = image.height) {
@@ -352,7 +354,7 @@ get hitboxY() {
     return intersectingObjects
   }
 }
-let rigidBodies = [];
+
 class RigidBody extends ConcreteObject {
   constructor(x, y, z, image, mass, scale = 1, heading = 0, hitboxXOffset = 0, hitboxYOffset = 0, hitboxWidth = image.width, hitboxHeight = image.height, ) {
     if (new.target === RigidBody) {
@@ -363,7 +365,7 @@ class RigidBody extends ConcreteObject {
     this.startY = y;
     this.startHeading = heading;
     this.velocity = new Victor(0, 0);
-    this.collisionImmunity =0;
+    this.collisionImmunity = 0;
     this.constrained = true;
     this.mass = mass;
     this.fillColor = "blue";
@@ -431,6 +433,35 @@ class RigidBody extends ConcreteObject {
       this.drawVector();
       if (this.collisionImmunity > 0){
         this.collisionImmunity--;
+      }
+      if (this.constrained) {return;}
+      for (let rigidBody of rigidBodies){
+        //Collision
+          if(this.collide(rigidBody)){
+         rigidBody.fillColor = "lime";
+         
+         
+         let collision = this.getMTV(rigidBody);
+        if (collision === null) return;
+        rigidBody.onCollision(this);
+        this.moveByVector(collision.mtv);
+        
+        let speed = this.velocity.dot(collision.tangent);
+
+        this.velocity = collision.tangent
+        .clone()
+        .multiplyScalar(speed);
+
+        this.contactRotation(collision);
+
+      
+         } else {
+          if (rigidBody === this) return;
+          rigidBody.fillColor = "blue";
+         }
+         
+        
+        
       }
   }
 
@@ -602,7 +633,17 @@ return {
 
 
 }
+
+  contactRotation(collision){
+    let angleDifference = RigidBody.angleDifference(this.heading, Math.abs(collision.tangent.angleDeg()));
+    if (Math.abs(angleDifference) < 90) {
+        this.rotateBy(-angleDifference * 0.1 * (this.speed * 0.4));
+    } else {
+     this.rotateBy(-angleDifference * 0.04 * (this.speed * 0.4)); 
+    }
+  }
 }
+let rigidBodies = [RigidBody];
 
 class Billboard extends RigidBody {
   constructor(x, y, forceCostume = null) {
@@ -612,7 +653,7 @@ class Billboard extends RigidBody {
   } else {
     img = getRandomImg(billboardImages);
   }
-    super(x, y, 25, img, 1400, 1.4, 0, 133, 300, 50, 65);
+    super(x, y, 25, img, 1400, 1.4, 0, 133, 323, 50, 45);
   }
 }
 
@@ -744,7 +785,7 @@ class PlayerCar extends RigidBody {
     this.startY = y;
     this.startHeading = heading;
     console.log("Created");
-    
+    this.constrained=false;
   }
 
   onLevelStart(point, heading){
@@ -765,8 +806,8 @@ class PlayerCar extends RigidBody {
       this.updatePolygonPos();
        return;
     }
+    this.accelerate(0.5);
     super.update();
-    this.barrierContact();
   }
 
   barrierContact(){
@@ -798,14 +839,7 @@ class PlayerCar extends RigidBody {
     });
   }
 
-  contactRotation(collision){
-    let angleDifference = RigidBody.angleDifference(this.heading, Math.abs(collision.tangent.angleDeg()));
-    if (Math.abs(angleDifference) < 90) {
-        this.rotateBy(-angleDifference * 0.1 * (this.speed * 0.4));
-    } else {
-     this.rotateBy(-angleDifference * 0.04 * (this.speed * 0.4)); 
-    }
-  }
+
 
   moveForward(units){
     this.x -= (units * Math.sin(toRadians(this.heading))); //units is negative because otherwise it goes backwards
@@ -953,10 +987,11 @@ function loop(){
   canvasObjects.forEach((object) => {
     object.update();
   });
-  
+
   requestAnimationFrame(loop);
 
 }
+
 
 let car = null;
 
@@ -964,16 +999,16 @@ let car = null;
 
 async function startGame() {
   await preloadImages();
-    new Level(backgroundImage, "Test", "This is a test Level", backgroundImage, new Point(500, 320), 90).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings)).editStars(new Array(1,0,1));
-    new Level(backgroundImage, "Test2", "This is a test Level", backgroundImage, new Point(-320, 0)).addObjects(new Array(new Billboard(320, 320), new Billboard(500, 320), new Billboard(320, 500)));
-  
+    new Level(backgroundImage, "Test", "This is a test Level", backgroundImage, new Point(500, 0), 90).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings)).editStars(new Array(1,0,1));
+    new Level(backgroundImage, "Test2", "This is a test Level", backgroundImage, new Point(-320, 0) ,  0).addObjects(new Array(new Billboard(320, 320), new Billboard(500, 320), new Billboard(320, 500)));
     car = new PlayerCar(
     500,
     40,
-    images[`/images/Cars/${colorArray[0][0]}_Car1.png`], //have to do this weird arrangment so I can load all the images in first
+    images[`/images/Cars/${colorArray[0][0]}_Car1.png`],
     90
   );
   levels[currentLvl-1].activate();
+  console.log(canvasObjects);
   loop();
 }
 

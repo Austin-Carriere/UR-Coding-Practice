@@ -18,7 +18,8 @@ const toolbox = {
                 {
                     kind: "block",
                     type: "logic_boolean"
-                }]
+                }
+            ]
 },
 {
     kind: "category",
@@ -56,7 +57,7 @@ const toolbox = {
     ]
 };
 
-const urbanRescueTheme = Blockly.Theme.defineTheme("urbanRescue", {
+    const urbanRescueTheme = Blockly.Theme.defineTheme("urbanRescue", {
     name: "urbanRescue",
 
     base: Blockly.Themes.Classic,
@@ -116,4 +117,8 @@ pannelButton.addEventListener("click", () => {
     panelActive = true;
   }
 });
+
+
+
+
 
