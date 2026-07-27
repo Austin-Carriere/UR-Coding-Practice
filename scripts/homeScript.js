@@ -1,6 +1,35 @@
 const lvlArea = document.querySelector(".levelSelectionHome");
+const playButton = document.querySelector(".playButton");
+const title = document.querySelector(".titlePlayButton");
 let backgroundImage = new Image();
 backgroundImage.src = "/images/Enviorment Assets/Backgrounds/Background 1.png";
+let currentRow = null;
+
+playButton.addEventListener("click", ()=>{
+    title.classList.add("inactive");
+    lvlArea.classList.remove("selectionInactive");
+})
+
+title.focus();
+
+
+
+class row{
+    constructor(){
+        this.element = this.createElement();
+        currentRow = this.element;
+        console.log(currentRow);
+    }
+
+    createElement(){
+        let template = document.querySelector(".LevelContainerTemplate");
+        const row = template.content.cloneNode(true).querySelector(".levelRow");
+        lvlArea.append(row);
+        return row;
+    }
+}
+
+new row();
 
 class Level{
   constructor(backgroundImage, title, description, preview){
@@ -60,7 +89,9 @@ class Level{
 
     });
     this.updateStars();
-    lvlArea.append(module);
+    console.log(currentRow);
+    currentRow.append(module);
+    if (this.lvlNum % 4 === 0) new row(); //Make a new row
     return module;
   }  
 }

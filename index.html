@@ -15,12 +15,16 @@
     <script type="module" src="/scripts/homeScript.js"></script>
   </head>
   <body>
+    <div class="titlePlayButton">
     <div class="title">
       <img src="images/urban-rescue-logo.png" width="250px" height="250px" />
       <div class="main">Urban Rescue</div>
       <div class="sub">Code Challenge</div>
     </div>
-    <div class="levelSelectionHome">
+    <button class="playButton">Play</button>
+    </div>
+    <div class="levelSelectionHome selectionInactive">
+
     </div>
     <template class="LevelModuleTemplate" id = "LevelModuleTemplate">
       <button class="LevelModule">
@@ -42,6 +46,10 @@
                       </div>
                     </div>
                   </button>
+    </template>
+
+    <template class="LevelContainerTemplate">
+      <div class="levelRow"></div>
     </template>
 
   </body>
