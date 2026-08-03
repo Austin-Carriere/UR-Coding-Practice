@@ -1812,7 +1812,15 @@ const toolbox = {
 const workspace = Blockly.inject(document.getElementById("blocklyDiv"), {
     toolbox: toolbox, 
     theme: urbanRescueTheme,
-     renderer: "zelos"
+     renderer: "zelos",
+     zoom: {
+    controls: true,
+    wheel: true,
+    startScale: 0.9,   // Default is 1.0
+    maxScale: 1.6,
+    minScale: 0.5,
+    scaleSpeed: 1.2
+  }
 });
 
 function numberShadow(value = 0) {
@@ -1847,6 +1855,7 @@ pannelButton.addEventListener("click", () => {
 workspace.addChangeListener(() => {
     numBlocks = workspace.getAllBlocks().filter(block => !block.isShadow()).length;
     blockCounter.textContent = `Blocks: ${numBlocks}`;
+    console.log("CHANGE");
 });
 
 

@@ -92,18 +92,6 @@ body {
   width: auto;
   margin: 0 5px 10px 0px;
 }
-#blockBankTitle {
-  background: gainsboro;
-  width: 90%;
-  margin: 10px;
-  border-radius: 10px;
-  text-align: center;
-  font-family: "Passero One", sans-serif;
-  color: #e6af2e;
-  font-size: 45px;
-  overflow: hidden;
-  user-select: none;
-}
 
 .blocklyToolbox {
     width: 240px
@@ -115,7 +103,7 @@ body {
 
 .blocklyToolboxCategoryLabel{
   font-size: 40px;
-  font-family: "Passero One";
+  font-family: "Concert One";
 }
 
 
@@ -123,17 +111,6 @@ body {
   border-right: 4px solid #e6af2e;
 }
 
-.ToolBox {
-  color: #ececec;
-  font-family: "Passero One", sans-serif;
-  text-align: center;
-  font-size: 30px;
-  font-weight: 500;
-  margin-bottom: 0;
-  margin-top: 15px;
-  padding-bottom: 15px;
-  border-bottom: #e6af2e solid 5px;
-}
 
 .blockCounter{
   width: 100%;
