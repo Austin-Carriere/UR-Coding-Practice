@@ -1,5 +1,4 @@
 import { Point, Segment, Polygon} from "https://cdn.jsdelivr.net/npm/@flatten-js/core/+esm";
-import {panelActive} from "/scripts/app.js";
 import Victor from "https://cdn.jsdelivr.net/npm/victor@1.1.0/+esm";
 
 const canvas = document.querySelector(".canvasPopup");
@@ -7,9 +6,26 @@ const panel = document.querySelector(".panel")
 const ctx = canvas.getContext("2d");
 const panelOverlay = document.querySelector(".canvasOverlay");
 const levelContainer = document.querySelector(".levelsContainer");
+const blockCounter = document.querySelector(".blockCounter");
+const COLORS = {
+    MOVEMENT: "#FFC800",   // Bright yellow
+    LOGIC: "#8B3DFF",      // Bright purple
+    OPERATORS: "#FF5252",  // Bright red
+    LOOPS: "#39D353",      // Bright green
+    SENSORS: "#ff0eef"     // Bright pink
+};
+let lockView = false;
 let overlayNum = 1;
 let backgroundImage = new Image();
 backgroundImage.src = "/images/Enviorment Assets/Backgrounds/Background 1.png";
+//1. Get query string
+const queryString = window.location.search;
+
+// 2. Parse the parameters
+const urlParams = new URLSearchParams(queryString);
+
+// 3. Extract your specific variables by their keys
+currentLvl = urlParams.get('level'); 
 
 let paused = false;
 const BackgroundScaleFactor = 0.242;
@@ -125,6 +141,7 @@ class Level{
     }
     
     car.onLevelStart(this.carStartPoint, this.carStartHeading);
+    CanvasObject.sortCanvasObjects();
   } 
 
   createElement(){
@@ -150,6 +167,7 @@ class Level{
       overlayActive = false;
       updateOverlay();
     });
+    levelContainer.append(module);
     this.updateStars();
     return module;
   }
@@ -162,7 +180,7 @@ let overlayActive = false
 
 class CanvasObject {
   //abstract
-  constructor(x, y, z, image, scale = 1, heading = 0) {
+  constructor(x, y, image, scale = 1, heading = 0) {
     if (new.target === CanvasObject) {
       //Make sure you cannot create an instance of this class
       throw new Error("Cannot instantiate an abstract class directly.");
@@ -170,7 +188,6 @@ class CanvasObject {
 
     this.x = x;
     this.y = y;
-    this.z = z;
     this.scale = scale;
     this.image = image;
     this.width = image.width * scale;
@@ -183,8 +200,12 @@ class CanvasObject {
     this.draw();
   }
 
+  get bottomY(){
+    return this.y - this.height
+  }
+
   static sortCanvasObjects() {
-    canvasObjects.sort((a, b) => a.z - b.z); //Sorting from smallest z to largest z
+    canvasObjects.sort((a, b) => b.bottomY - a.bottomY); //Sorting from smallest z to largest z
   }
 
   draw() {
@@ -211,42 +232,16 @@ class CanvasObject {
     return camera.y - this.y;
   }
 
-  bringToFront() {
-    CanvasObject.sortCanvasObjects(); //Make sure list is sorted before hand
-    let highestZIndex = canvasObjects[canvasObjects.length - 1].z;
-    this.z = highestZIndex + 1;
-    CanvasObject.sortCanvasObjects();
-  }
-  bringToBack() {
-    CanvasObject.sortCanvasObjects(); //Make sure list is sorted before hand
-    let lowestZIndex = canvasObjects[0].z;
-    this.z = lowestZIndex-1;
-    CanvasObject.sortCanvasObjects();
-  }
-
-  setZ(newZ) {
-    this.z = newZ;
-  }
-
-  setAvgLayer(percent) {
-    var totalZ = 0;
-    canvasObjects.forEach((obj) => {
-      totalZ += obj.z;
-    });
-    this.z = ((percent / 50) * totalZ) / canvasObjects.length;
-  }
 }
 let canvasObjects = [CanvasObject]; //Only Objects on the canvas
 
 
 class ConcreteObject extends CanvasObject {
-  constructor(x, y, z, image, scale = 1, heading = 0, hitboxXOffset = 0, hitboxYOffset = 0, hitboxWidth = image.width, hitboxHeight = image.height) {
+  constructor(x, y, image, scale = 1, heading = 0, hitboxXOffset = 0, hitboxYOffset = 0, hitboxWidth = image.width, hitboxHeight = image.height) {
     if (new.target === ConcreteObject) {
       throw new console.error("Cannot Instantiate Concrete Object");
     }
-    super(x, y, z, image, scale, heading);
-   
-    this.moveable = false;
+    super(x, y, image, scale, heading);
     this.hitboxWidth = hitboxWidth * scale;
     this.hitboxHeight = hitboxHeight * scale; 
     this.hitboxOffset = new Victor(hitboxXOffset, hitboxYOffset);
@@ -356,11 +351,11 @@ get hitboxY() {
 }
 
 class RigidBody extends ConcreteObject {
-  constructor(x, y, z, image, mass, scale = 1, heading = 0, hitboxXOffset = 0, hitboxYOffset = 0, hitboxWidth = image.width, hitboxHeight = image.height, ) {
+  constructor(x, y, image, mass, scale = 1, heading = 0, hitboxXOffset = 0, hitboxYOffset = 0, hitboxWidth = image.width, hitboxHeight = image.height, ) {
     if (new.target === RigidBody) {
       throw new console.error("Cannot Instantiate Rigid Body");
     }
-    super(x, y, z, image, scale, heading, hitboxXOffset, hitboxYOffset, hitboxWidth, hitboxHeight);
+    super(x, y, image, scale, heading, hitboxXOffset, hitboxYOffset, hitboxWidth, hitboxHeight);
      this.startX = x;
     this.startY = y;
     this.startHeading = heading;
@@ -653,7 +648,7 @@ class Billboard extends RigidBody {
   } else {
     img = getRandomImg(billboardImages);
   }
-    super(x, y, 25, img, 1400, 1.4, 0, 133, 323, 50, 45);
+    super(x, y, img, 1400, 1.4, 0, 133, 323, 50, 45);
   }
 }
 
@@ -665,7 +660,7 @@ class TrashCan extends RigidBody {
   } else {
     img = getRandomImg(trashcanImages);
   }
-  super(x, y, 7, img, 25, 0.9, 0, 4, 32, img.width*0.8, 60);
+  super(x, y, img, 25, 0.9, 0, 4, 32, img.width*0.8, 60);
   this.constrained = false;
   }
 }
@@ -684,7 +679,7 @@ class TrafficLight extends RigidBody{
   let xOffset = 0
   if (forceCostume >= 10 && forceCostume <= 12) xOffset = 115;
 
-  super(x, y, 20, img, 250, 0.8, 0, 8 + xOffset, 125, 30, img.height*0.34);
+  super(x, y, img, 250, 0.8, 0, 8 + xOffset, 125, 30, img.height*0.34);
   this.costumeOffset = 0;
   if ((forceCostume >=1 && forceCostume <=3) || (forceCostume >= 7 && forceCostume <= 12) ){
     this.changeLights = true;
@@ -752,14 +747,14 @@ class ThinBuilding extends RigidBody{
   constructor(x, y){  
     let img = new Image();
     img = getRandomImg(thinBuildings);
-    super(x, img.height*0.9 + y, 16, img, 10000, 0.9, 0, 8, img.height*0.715, img.width*.95, img.height*0.2);
+    super(x, img.height*0.9 + y, img, 10000, 0.9, 0, 8, img.height*0.715, img.width*.95, img.height*0.2);
   }
 }
 
 class Barrier extends RigidBody {
   constructor(x, y, heading = 0, hitboxWidth = 20, hitboxHeight = 20) {
     
-    super(x, y, 0, new Image(hitboxWidth, hitboxHeight), Infinity, 1, heading, 0, 0, hitboxWidth, hitboxHeight);
+    super(x, y, new Image(hitboxWidth, hitboxHeight), Infinity, 1, heading, 0, 0, hitboxWidth, hitboxHeight);
     this.fillColor = "blue";
   }
   
@@ -775,28 +770,34 @@ class FloatingObject extends CanvasObject {
 
 
 }
-
 class PlayerCar extends RigidBody {
   constructor(x, y, image, heading = 0){
-    super(x, y, 5, image, 45 , 1.1, heading);
-    this.moveable = true;
+    super(x, y, image, 45 , 1.1, heading);
     this.fillColor = "red";
     this.startX = x;
     this.startY = y;
     this.startHeading = heading;
-    console.log("Created");
     this.constrained=false;
   }
 
   onLevelStart(point, heading){
     canvasObjects.push(this);
     rigidBodies.push(this);
+    this.velocity = new Victor(0,0);
     this.moveTo(point.x, point.y);
     this.rotateTo(heading);
     this.startX = point.x;
     this.startY = point.y;
     this.startHeading = heading;
     camera.setPos(this.x, this.y);
+  }
+
+  get bottomY(){
+    let smallestY = Infinity
+    this.hitboxPoints.forEach((point) => {
+      if (point.y < smallestY) smallestY = point.y
+    })
+    return smallestY;
   }
 
   update(){
@@ -910,6 +911,10 @@ class Camera {
     this.dx = 0;
     this.y += this.dy;
     this.dy = 0;
+    if (lockView) {
+      this.x = car.x;
+      this.y = car.y;
+    }
   }
 
   setPos(x, y){
@@ -942,6 +947,7 @@ class Camera {
     canvas.addEventListener("mousemove", (event) => {
      // console.log("Mouse: ", -(event.offsetX - canvas.width/2 - this.x), -(event.offsetY - canvas.height/2 - this.y));
       if (!drag) return;
+      lockView = false;
       this.dx += (event.offsetX - mouseX) * (1/this.zoom); //apply the difference to the camera
       this.dy += (event.offsetY - mouseY) * (1/this.zoom);
       this.outOfBoundsCorrection();
@@ -958,7 +964,7 @@ class Camera {
 
     canvas.addEventListener('wheel', (event) => {
     event.preventDefault();
-    this.zoom += -event.deltaY/1240
+    this.zoom += -event.deltaY/1200
     this.zoom = Math.min(2.3, Math.max(0.7, this.zoom)); //Bound zoom
 });
 
@@ -972,21 +978,25 @@ let background = new Background(backgroundImage);
 function loop(){
   if (overlayActive || !panelActive) {
     updateOverlay();
+    
    requestAnimationFrame(loop); //To Pause if Overlay is on
     return;
   } 
-  updateOverlay();
- ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.translate(canvas.width / 2, canvas.height / 2); // set center to (0,0)
 
     ctx.scale(camera.zoom, camera.zoom);
     camera.update();
+    CanvasObject.sortCanvasObjects();
     background.draw();
+    let numAC = 0
   canvasObjects.forEach((object) => {
     object.update();
+    if (object instanceof PlayerCar) numAC +=1;
   });
+  console.log(numAC);
 
   requestAnimationFrame(loop);
 
@@ -999,7 +1009,7 @@ let car = null;
 
 async function startGame() {
   await preloadImages();
-    new Level(backgroundImage, "Test", "This is a test Level", backgroundImage, new Point(500, 0), 90).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings)).editStars(new Array(1,0,1));
+    new Level(backgroundImage, "Test", "This is a test Level", backgroundImage, new Point(500, 200), 90).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings)).editStars(new Array(1,0,1));
     new Level(backgroundImage, "Test2", "This is a test Level", backgroundImage, new Point(-320, 0) ,  0).addObjects(new Array(new Billboard(320, 320), new Billboard(500, 320), new Billboard(320, 500)));
     car = new PlayerCar(
     500,
@@ -1008,7 +1018,6 @@ async function startGame() {
     90
   );
   levels[currentLvl-1].activate();
-  console.log(canvasObjects);
   loop();
 }
 
@@ -1106,6 +1115,7 @@ const carCostumeText = document.querySelector(".CarCostumeText");
 const carTypeText = document.querySelector("#CarTypeText");
 const confirmButton = document.querySelector(".CarCostumeConfirmButton");
 const carChangerButton = document.getElementById("carChangerButton");
+const lockViewButton = document.getElementById("lockView");
 
 let colorIndex = 0;
 let typeIndex = 0;
@@ -1200,6 +1210,10 @@ levelSelectorButton.addEventListener("click", ()=>{
   updateOverlay();
 });
 
+lockViewButton.addEventListener("click", ()=>{
+  lockView = true;
+})
+
 playButton.addEventListener("click", () =>{
   paused = !paused;
 
@@ -1226,3 +1240,614 @@ window.addEventListener("keydown", (event) => {
 
 
 startGame();
+
+//----------------------Blockly-----------------------
+//----------------------Block Definitions------------------
+  const operators_compare = {
+  init: function () {
+    this.appendValueInput("A")
+        .setCheck("Number");
+
+    this.appendDummyInput()
+        .appendField(new Blockly.FieldDropdown([
+            ["=", "EQ"],
+            ["≠", "NEQ"],
+            ["<", "LT"],
+            ["≤", "LTE"],
+            [">", "GT"],
+            ["≥", "GTE"]
+        ]), "OP");
+
+    this.appendValueInput("B")
+        .setCheck("Number");
+
+    this.setInputsInline(true);
+
+    this.setOutput(true, "Boolean");
+
+    this.setTooltip("Compare two numbers.");
+    this.setStyle("operator_blocks");
+  }
+};
+Blockly.common.defineBlocks({operators_compare: operators_compare});
+
+javascript.javascriptGenerator.forBlock["operators_compare"] = function (block) {
+
+    const left = javascript.javascriptGenerator.valueToCode(
+        block,
+        "A",
+        javascript.Order.RELATIONAL
+    ) || 0;
+
+    const right = javascript.javascriptGenerator.valueToCode(
+        block,
+        "B",
+        javascript.Order.RELATIONAL
+    ) || 0;
+
+    const op = {
+        EQ: "==",
+        NEQ: "!=",
+        LT: "<",
+        LTE: "<=",
+        GT: ">",
+        GTE: ">="
+    }[block.getFieldValue("OP")];
+
+    return [`${left} ${op} ${right}`, javascript.Order.RELATIONAL];
+};
+
+  const operators_math  = {
+  init: function () {
+
+    this.appendValueInput("A")
+        .setCheck("Number");
+
+    this.appendDummyInput()
+        .appendField(new Blockly.FieldDropdown([
+            ["+", "ADD"],
+            ["−", "MINUS"],
+            ["×", "MULTIPLY"],
+            ["÷", "DIVIDE"],
+            ["^", "POWER"]
+        ]), "OP");
+
+    this.appendValueInput("B")
+        .setCheck("Number");
+
+    this.setInputsInline(true);
+
+    this.setOutput(true, "Number");
+
+    this.setTooltip("Perform any math operation.");
+    this.setStyle("operator_blocks");
+  }
+};
+Blockly.common.defineBlocks({operators_math: operators_math});
+
+javascript.javascriptGenerator.forBlock["operators_math"] = function (block) {
+   const left = javascript.javascriptGenerator.valueToCode(
+        block,
+        "A",
+        javascript.Order.ADDITION
+    ) || 0;
+
+    const right = javascript.javascriptGenerator.valueToCode(
+        block,
+        "B",
+        javascript.Order.ADDITION
+    ) || 0;
+
+    const op = {
+        ADD: "+",
+        MINUS: "-",
+        MULTIPLY: "*",
+        DIVIDE: "/",
+        POWER: "**"
+    }[block.getFieldValue("OP")];
+
+    return [`${left} ${op} ${right}`, javascript.Order.ADDITION];
+}
+
+const operators_operation  = {
+    init: function () {
+
+        this.appendValueInput("A")
+            .setCheck("Boolean");
+
+        this.appendDummyInput()
+            .appendField(new Blockly.FieldDropdown([
+                ["and", "AND"],
+                ["or", "OR"]
+            ]), "OP");
+
+        this.appendValueInput("B")
+            .setCheck("Boolean");
+
+        this.setInputsInline(true);
+
+        this.setOutput(true, "Boolean");
+
+        this.setTooltip("Combine two conditions.");
+        this.setStyle("operator_blocks");
+    }
+};
+Blockly.common.defineBlocks({operators_operation: operators_operation});
+
+javascript.javascriptGenerator.forBlock["operators_operation"] = function(block) {
+
+    const left =
+        javascript.javascriptGenerator.valueToCode(
+            block,
+            "A",
+            javascript.Order.LOGICAL_AND
+        ) || "false";
+
+    const right =
+        javascript.javascriptGenerator.valueToCode(
+            block,
+            "B",
+            javascript.Order.LOGICAL_AND
+        ) || "false";
+
+    const op = {
+        AND: "&&",
+        OR: "||"
+    }[block.getFieldValue("OP")];
+
+    const order =
+        op === "&&"
+            ? javascript.Order.LOGICAL_AND
+            : javascript.Order.LOGICAL_OR;
+
+    return [`${left} ${op} ${right}`, order];
+};
+
+const operators_negate = {
+  init: function () {
+    this.appendValueInput("BOOL")
+        .setCheck("Boolean")
+        .appendField("not");
+
+    this.setOutput(true, "Boolean");
+
+    this.setStyle("operator_blocks");
+    this.setTooltip("Returns the opposite of a boolean value");
+    this.setHelpUrl("");
+  }
+};
+Blockly.common.defineBlocks({operators_negate: operators_negate});
+javascript.javascriptGenerator.forBlock["operators_negate"] = function(block) {
+  const value = javascriptGenerator.valueToCode(
+    block,
+    "BOOL",
+    javascriptGenerator.ORDER_NONE
+  ) || "false";
+
+  return [`!(${value})`, javascriptGenerator.ORDER_LOGICAL_NOT];
+};
+
+const logic_waitUntil = {
+  init: function() {
+    this.appendValueInput('NAME')
+    .setCheck('Boolean')
+      .appendField('wait until');
+    this.setInputsInline(true)
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip('Wait until the give condition is true');
+    this.setHelpUrl('');
+    this.setStyle("logic_blocks");
+  }
+};
+Blockly.common.defineBlocks({logic_waitUntil: logic_waitUntil});
+                    
+javascript.javascriptGenerator.forBlock['logic_waitUntil'] = function() {
+  // TODO: change Order.ATOMIC to the correct operator precedence strength
+  const value_name = generator.valueToCode(block, 'NAME', javascript.Order.ATOMIC);
+
+  // TODO: Assemble javascript into the code variable.
+  const code = '...';
+  return code;
+}
+
+const start_block = {
+  init: function() {
+    this.appendDummyInput('text')
+      .appendField(new Blockly.FieldImage('/images/Play Icon.png', 15, 15, '*'))
+      .appendField('On start');
+    this.setInputsInline(true)
+    this.setNextStatement(true, null);
+    this.setTooltip('Everything attached to this will run on start');
+    this.setHelpUrl('');
+    this.setColour(120);
+  }
+};
+Blockly.common.defineBlocks({start_block: start_block});
+                                
+  
+  const Movement_drive = {
+  init: function() {
+    this.appendDummyInput('moveseconds')
+      .appendField(new Blockly.FieldDropdown([
+          ['move forward', 'Forward'],
+          ['move backward', 'Backward']
+        ]), 'moveOption')
+      .appendField(new Blockly.FieldLabelSerializable('for'), 'middle_text_label');
+    this.appendValueInput('seconds')
+    .setCheck('Number');
+    this.appendDummyInput('end_text')
+      .appendField('seconds');
+    this.setInputsInline(true)
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip('Move the car forward or backwards for a certain amount of time');
+    this.setHelpUrl('');
+    this.setColour(COLORS.MOVEMENT);
+  }
+};
+Blockly.common.defineBlocks({Movement_drive: Movement_drive});
+javascript.javascriptGenerator.forBlock['Movement_drive'] = function() {
+  const dropdown_moveoption = block.getFieldValue('moveOption');
+  const number_seconds = block.getFieldValue('seconds');
+
+
+  // TODO: Assemble javascript into the code variable.
+  const code = ``;
+  return code;
+}
+
+  const Movement_turn = {
+  init: function() {
+    this.appendDummyInput('turn_query')
+      .appendField(new Blockly.FieldDropdown([
+          ['turn right', 'R'],
+          ['turn left', 'L']
+        ]), 'turn_direction');
+    this.appendValueInput('degrees')
+    .setCheck('Number');
+    this.appendDummyInput('end_text')
+    .appendField('degrees')
+    this.setInputsInline(true)
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip('');
+    this.setHelpUrl('turn the car left or right for a set amount of degrees');
+    this.setColour(COLORS.MOVEMENT);
+  }
+};
+Blockly.common.defineBlocks({Movement_turn: Movement_turn});
+javascript.javascriptGenerator.forBlock['Movement_turn'] = function() {
+  const dropdown_turn_direction = block.getFieldValue('turn_direction');
+
+  // TODO: change Order.ATOMIC to the correct operator precedence strength
+  const value_degress = generator.valueToCode(block, 'degress', javascript.Order.ATOMIC);
+
+  // TODO: Assemble javascript into the code variable.
+  const code = '...';
+  return code;
+}
+
+const Movement_speed = {
+  init: function() {
+    this.appendValueInput('speed')
+    .setCheck('Number')
+      .appendField('set speed to');
+    this.appendDummyInput('text')
+      .appendField('mph');
+    this.setInputsInline(true)
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip('');
+    this.setHelpUrl('set your target speed to a certain number');
+    this.setColour(COLORS.MOVEMENT);
+  }
+};
+Blockly.common.defineBlocks({Movement_speed: Movement_speed});
+javascript.javascriptGenerator.forBlock['Movement_speed'] = function() {
+  // TODO: change Order.ATOMIC to the correct operator precedence strength
+  const value_speed = generator.valueToCode(block, 'speed', javascript.Order.ATOMIC);
+
+
+  // TODO: Assemble javascript into the code variable.
+  const code = '...';
+  return code;
+}       
+                    
+const sensors_trafficLight = {
+  init: function() {
+    this.appendDummyInput('NAME')
+      .appendField(new Blockly.FieldDropdown([
+         ['is traffic light red ?', 'R'],
+          ['is traffic light yellow ?', 'G'],
+          ['is traffic light green ?', 'B'],
+          ['is traffic light not present ?', 'NA']
+        ]), 'lightColor');
+    this.setTooltip('returns true if the traffic light (needs to be close) is on the selected light');
+    this.setHelpUrl('');
+    this.setColour(COLORS.SENSORS);
+    this.setOutput(true, "Boolean");
+
+  }
+};
+Blockly.common.defineBlocks({sensors_trafficLight: sensors_trafficLight});
+                    
+  javascript.javascriptGenerator.forBlock['Sensors_trafficLight'] = function() {
+  const dropdown_name = block.getFieldValue('NAME');
+
+  // TODO: Assemble javascript into the code variable.
+  const code = '...';
+  return code;
+}    
+
+const sensors_getSpeed = {
+  init: function() {
+    this.appendDummyInput('text')
+      .appendField('current speed (mph)');
+    this.setInputsInline(true)
+    this.setTooltip('returns the car\'s current speed (e.g. stopped = 0)');
+    this.setHelpUrl('');
+    this.setColour(COLORS.SENSORS);
+    this.setOutput(true, "Number");
+  }
+};
+Blockly.common.defineBlocks({sensors_getSpeed: sensors_getSpeed});
+javascript.javascriptGenerator.forBlock['sensors_getSpeed'] = function() {
+
+  // TODO: Assemble javascript into the code variable.
+  const code = '...';
+  return code;
+}
+
+const sensors_getMaxSpeed = {
+  init: function() {
+    this.appendDummyInput('text')
+      .appendField('set speed (mph)');
+    this.setInputsInline(true)
+    this.setTooltip('returns the car\'s set speed (e.g. if the car is stopped and you set its speed to 20mph it will return 20');
+    this.setHelpUrl('');
+    this.setColour(COLORS.SENSORS);
+    this.setOutput(true, "Number");
+  }
+};
+Blockly.common.defineBlocks({sensors_getMaxSpeed: sensors_getMaxSpeed});
+javascript.javascriptGenerator.forBlock['sensors_getMaxSpeed'] = function() {
+
+  // TODO: Assemble javascript into the code variable.
+  const code = '...';
+  return code;
+}
+
+
+
+const toolbox = {
+  kind: "categoryToolbox",
+    contents: [
+        {
+    kind: "category",
+    name: "Movement",
+    colour: "#ffe100",
+    contents: [
+     {
+        kind: "block",
+        type: "Movement_drive",
+        inputs: {
+        seconds: {
+              shadow: {
+                type: "math_number",
+                  fields: {
+                  NUM: 0
+                    }
+      }
+    }
+    }
+      }, 
+      {
+        kind: "block", 
+        type: "Movement_turn",
+        inputs: {
+          degrees: numberShadow(0)
+    }
+      },
+      {
+        kind: "block",
+        type: "Movement_speed",
+        inputs: {
+          speed: numberShadow(0)
+        }
+      }
+    ]
+},
+{
+    kind: "category",
+    name: "Logic",
+    colour: "#5e0eff",
+    contents: [
+                {
+                    kind: "block",
+                    type: "logic_boolean"
+                }, 
+                {
+                  kind: "block",
+                  type: "controls_if"
+                }, 
+                {
+                  kind: "block",
+                  type: "logic_waitUntil"
+                }
+            ]
+},
+{
+    kind: "category",
+    name: "Operators",
+    colour: "#ff0e0e",
+    contents: [
+                {
+                    kind: "block",
+                    type: "operators_math",
+                    inputs: {
+        A: numberShadow(0),
+        B: numberShadow(0)
+                      },
+                }, 
+                {
+                  kind: "block",
+                  type: "operators_operation"
+                }, 
+                {
+    kind: "block",
+    type: "operators_compare",
+    inputs: {
+        A: numberShadow(0),
+        B: numberShadow(0)
+        }
+                },
+                {
+                  kind: "block",
+                  type: "operators_negate"      
+                }
+              ]
+},
+{
+    kind: "category",
+    name: "Loops",
+    colour: "#12ff0e",
+    contents: [ {
+                    kind: "block",
+                    type: "controls_repeat_ext",
+                    inputs: {
+                      TIMES: numberShadow(0)
+                    }
+
+                },
+                {
+                    kind: "block",
+                    type: "controls_whileUntil"
+                },
+                {
+                  kind: "block", 
+                  type: "start_block"
+                }]
+},
+{
+    kind: "category",
+    name: "Sensors",
+    colour: "#ff0eef",
+    contents: [
+      {
+        kind: "block",
+        type: "sensors_trafficLight"
+      },
+      {
+        kind: "block",
+        type: "sensors_getSpeed"
+      },
+      {
+        kind: "block", 
+        type: "sensors_getMaxSpeed"
+      }
+    ]
+}
+      
+    ]
+};
+
+    const urbanRescueTheme = Blockly.Theme.defineTheme("urbanRescue", {
+    name: "urbanRescue",
+
+    base: Blockly.Themes.Classic,
+
+    componentStyles: {
+        workspaceBackgroundColour: "#161f3b",
+
+        toolboxBackgroundColour: "#282f44",
+        toolboxForegroundColour: "#f5d061",
+
+        flyoutBackgroundColour: "#333c4a",
+        flyoutForegroundColour: "#ffffff",
+
+        flyoutOpacity: 1,
+
+        scrollbarColour: "#e6af2e",
+        scrollbarOpacity: 0.5,
+
+        insertionMarkerColour: "#e6af2e",
+
+        insertionMarkerOpacity: 0.4,
+
+        selectedGlowColour: "#f5d061",
+        selectedGlowOpacity: 0.35,
+
+        replacementGlowColour: "#4a78c2",
+        replacementGlowOpacity: 0.3
+    },
+
+     blockStyles: {
+        logic_blocks: {
+            colourPrimary: "#8B3DFF",
+            colourSecondary: "#7630E0",
+            colourTertiary: "#6126C2"
+        },
+
+        operator_blocks: {
+            colourPrimary: "#FF5252",
+            colourSecondary: "#E64545",
+            colourTertiary: "#CC3838"
+        },
+
+        Sensors: {
+            colourPrimary: "#FF5252",
+            colourSecondary: "#E64545",
+            colourTertiary: "#CC3838"
+        }
+    }, 
+
+    fontStyle: {
+        family: "Elms Sans",
+        weight: "normal",
+        size: 14
+    }
+});
+
+const workspace = Blockly.inject(document.getElementById("blocklyDiv"), {
+    toolbox: toolbox, 
+    theme: urbanRescueTheme,
+     renderer: "zelos"
+});
+
+function numberShadow(value = 0) {
+    return {
+        shadow: {
+            type: "math_number",
+            fields: {
+                NUM: value
+            }
+        }
+    };
+}
+
+const panelContainer = document.getElementById("panelContainer");
+const pannelButton = document.getElementById("panelButton");
+const panelArrow = document.getElementById("panelArrow");
+let panelActive = false;
+
+pannelButton.addEventListener("click", () => {
+  if (panelActive) {
+    panelContainer.classList.remove("active");
+    panelArrow.classList.remove("active");
+    panelActive = false;
+  } else {
+    panelArrow.classList.add("active");
+    panelContainer.classList.add("active");
+
+    panelActive = true;
+  }
+});
+  let numBlocks = 0;
+workspace.addChangeListener(() => {
+    numBlocks = workspace.getAllBlocks().filter(block => !block.isShadow()).length;
+    blockCounter.textContent = `Blocks: ${numBlocks}`;
+});
+
+
+

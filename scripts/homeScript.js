@@ -10,7 +10,9 @@ playButton.addEventListener("click", ()=>{
     lvlArea.classList.remove("selectionInactive");
 })
 
-title.focus();
+window.addEventListener("load", () => {
+    window.scrollTo(0, 0);
+});
 
 
 
@@ -18,7 +20,6 @@ class row{
     constructor(){
         this.element = this.createElement();
         currentRow = this.element;
-        console.log(currentRow);
     }
 
     createElement(){
@@ -86,10 +87,9 @@ class Level{
 
     module.addEventListener("click", ()=>{
       if (module.classList.contains("locked")) return;
-
+        window.location.href = `workspace.html?level=${this.lvlNum}`;
     });
     this.updateStars();
-    console.log(currentRow);
     currentRow.append(module);
     if (this.lvlNum % 4 === 0) new row(); //Make a new row
     return module;
@@ -106,4 +106,8 @@ new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
 new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
 new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
 new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
-
+new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
+new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
+new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
+new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
+new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);

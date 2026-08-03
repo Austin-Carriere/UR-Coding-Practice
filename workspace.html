@@ -17,9 +17,10 @@
     />
     <link href="https://fonts.googleapis.com/css2?family=DynaPuff:wght@400..700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Jersey+10&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/blockly/blockly_compressed.js"></script>
+    <script src="https://unpkg.com/blockly/javascript_compressed.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/blockly/blockly.min.js"></script>
     <script src="/scripts/levels.js"></script>
-    <script type="module" defer src="scripts/app.js"></script>
     <script type="module" defer src="scripts/canvasScript.js"></script>
   </head>
   <body>
@@ -88,7 +89,7 @@
                 <img src="/images/Level Selector Icon.png">
               </button>
 
-              <button id="carChangerButton" class="canvasButton">
+              <button id="lockView" class="canvasButton">
                 <img src="/images/Settings Icon.png">
               </button>
                   </div>
@@ -110,7 +111,7 @@
          
       </div>
       </div>
-    <div class="blockCounter">Blocks: 1</div> 
+    <div class="blockCounter">Blocks: 0</div> 
     <template class="LevelModuleTemplate" id = "LevelModuleTemplate">
       <button class="LevelModule">
                     <div class="LevelModuleTitleNumContainer">
