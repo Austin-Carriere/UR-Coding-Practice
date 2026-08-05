@@ -10,10 +10,10 @@ playButton.addEventListener("click", ()=>{
     lvlArea.classList.remove("selectionInactive");
 })
 
-window.addEventListener("load", () => {
+window.addEventListener("scroll", () => {
+    console.log(window.scrollX, window.scrollY);
     window.scrollTo(0, 0);
 });
-
 
 
 class row{

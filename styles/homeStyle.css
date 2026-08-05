@@ -137,7 +137,7 @@ html {
 }
 
 .LevelModule{
-   transition: transform 300ms ease-in, box-shadow 300ms ease-in, width 300ms ease-in;
+   transition: transform 200ms ease-in, box-shadow 200ms ease-in, width 200ms ease-in;
   width: 180px;
   height: 180px;
   background-color: rgb(37, 49, 75);
