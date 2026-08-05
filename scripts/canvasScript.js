@@ -1,6 +1,15 @@
 import { Point, Segment, Polygon} from "https://cdn.jsdelivr.net/npm/@flatten-js/core/+esm";
 import Victor from "https://cdn.jsdelivr.net/npm/victor@1.1.0/+esm";
 
+const DIRECTION = {
+  FORWARD: 0,
+  BACKWARD: 1,
+  LEFT: 2,
+  RIGHT: 3
+}
+let levels = [];
+let maxLvl = 1;
+let currentLvl = 1;
 const canvas = document.querySelector(".canvasPopup");
 const panel = document.querySelector(".panel")
 const ctx = canvas.getContext("2d");
@@ -26,6 +35,7 @@ const urlParams = new URLSearchParams(queryString);
 
 // 3. Extract your specific variables by their keys
 currentLvl = urlParams.get('level'); 
+if (currentLvl === null) currentLvl = 1;
 
 let paused = false;
 const BackgroundScaleFactor = 0.242;
@@ -364,6 +374,7 @@ class RigidBody extends ConcreteObject {
     this.constrained = true;
     this.mass = mass;
     this.fillColor = "blue";
+    this.k = 0.5;
     }
 
     reset(){
@@ -465,7 +476,7 @@ class RigidBody extends ConcreteObject {
   }
 
   get speed(){
-    return this.velocity.length();
+    return this.velocity.length() * 4;
   }
 
   setSpeed(speed){
@@ -473,7 +484,7 @@ class RigidBody extends ConcreteObject {
         -Math.sin(toRadians(this.heading)),
          Math.cos(toRadians(this.heading))
     );
-    this.velocity = forward;
+    this.velocity = forward.multiplyScalar(speed);
   }
 
   moveByVector(vector){
@@ -507,6 +518,49 @@ accelerate(amount) {
     this.velocity.add(
         forward.multiplyScalar(amount)
     );
+}
+
+accelerateTo(targetSpeed) {
+  let sign = 1;
+  if (targetSpeed < 0) {
+    sign = -1;
+    targetSpeed = Math.abs(targetSpeed);
+  }
+   const error = targetSpeed - this.speed;
+
+    let normalized = Math.min(Math.pow(5, Math.abs(error))/70, 0.7);
+    if (error > 1){
+      normalized = Math.max(normalized, 0.2);
+    }
+    const throttle = Math.sign(error) * normalized * normalized;
+    
+    this.accelerate(throttle * sign);
+}
+
+rotateToward(heading, direction) {
+    if (direction === DIRECTION.LEFT) {
+        heading *= -1;
+    }
+
+    if (this.remainingRotation === 0) return;
+
+    const maxSpeed = 2;
+    const minSpeed = 0.3;
+
+    // Slow down as we get close to the target
+    let speed = Math.abs(this.remainingRotation) / 30;
+    speed = Math.min(speed, maxSpeed);
+    speed = Math.max(speed, minSpeed);
+
+    const amount = speed;
+
+    if (this.remainingRotation > 0) {
+        this.rotateBy(amount);
+        this.remainingRotation -= amount;
+    } else {
+        this.rotateBy(-amount);
+        this.remainingRotation += amount;
+    }
 }
 
 static angleDifference(a, b) {
@@ -772,17 +826,26 @@ class FloatingObject extends CanvasObject {
 }
 class PlayerCar extends RigidBody {
   constructor(x, y, image, heading = 0){
-    super(x, y, image, 45 , 1.1, heading);
+    super(x, y, image, 45 , 1.3, heading);
     this.fillColor = "red";
     this.startX = x;
     this.startY = y;
     this.startHeading = heading;
     this.constrained=false;
+    this.setSpeed = 25;
+    this.remainingRotation = 0;
+  }
+
+  reset(){
+    super.reset();
+    this.setSpeed = 25;
   }
 
   onLevelStart(point, heading){
-    canvasObjects.push(this);
-    rigidBodies.push(this);
+    if (canvasObjects.indexOf(car) === -1) { //Weird issue where car spawns again everytime you select a level
+      canvasObjects.push(car);
+      rigidBodies.push(car);
+    }
     this.velocity = new Victor(0,0);
     this.moveTo(point.x, point.y);
     this.rotateTo(heading);
@@ -807,7 +870,6 @@ class PlayerCar extends RigidBody {
       this.updatePolygonPos();
        return;
     }
-    this.accelerate(0.5);
     super.update();
   }
 
@@ -991,12 +1053,9 @@ function loop(){
     camera.update();
     CanvasObject.sortCanvasObjects();
     background.draw();
-    let numAC = 0
   canvasObjects.forEach((object) => {
     object.update();
-    if (object instanceof PlayerCar) numAC +=1;
   });
-  console.log(numAC);
 
   requestAnimationFrame(loop);
 
@@ -1009,7 +1068,7 @@ let car = null;
 
 async function startGame() {
   await preloadImages();
-    new Level(backgroundImage, "Test", "This is a test Level", backgroundImage, new Point(500, 200), 90).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings)).editStars(new Array(1,0,1));
+    new Level(backgroundImage, "Test", "This is a test Level", backgroundImage, new Point(600, -200), 0).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings)).editStars(new Array(1,0,1));
     new Level(backgroundImage, "Test2", "This is a test Level", backgroundImage, new Point(-320, 0) ,  0).addObjects(new Array(new Billboard(320, 320), new Billboard(500, 320), new Billboard(320, 500)));
     car = new PlayerCar(
     500,
@@ -1019,6 +1078,7 @@ async function startGame() {
   );
   levels[currentLvl-1].activate();
   loop();
+  paused = true; //So it can draw the initial frame
 }
 
 
@@ -1038,9 +1098,6 @@ function getRandomImg(imgArray){
   return imgArray[Math.floor(Math.random() * imgArray.length)];
 }
 
-
-
-
 function loadImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -1049,7 +1106,6 @@ function loadImage(src) {
     img.src = src;
   });
 }
-
 
 function resizeCanvas() {
   canvas.width = panel.getBoundingClientRect().width*.87;
@@ -1097,8 +1153,6 @@ function disableAllOverlays(){
   levelSelectorMenu.style.width = 0;
 }
 
-
-
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
@@ -1129,10 +1183,6 @@ const colorArray = [
 
 const typeArray = ["Truck", "Racer", "Mustang", "Corvette"];
 
-// Then create the player
-
-
-//--------------------Car Changer cont.----------------------------------
 RArrowColor.addEventListener("click", () =>{
   if(colorIndex + 1 === colorArray[typeIndex].length){
     colorIndex = 0;
@@ -1214,21 +1264,29 @@ lockViewButton.addEventListener("click", ()=>{
   lockView = true;
 })
 
+
 playButton.addEventListener("click", () =>{
   paused = !paused;
 
   if (!paused){
     playButtonImg.src = "/images/Pause Icon.png";
+    console.log(scriptRunning);
+    runScript();
   } else {
     playButtonImg.src = "/images/Play Icon.png";
   }
+  
 });
 
 restartButton.addEventListener("click", ()=>{
   for (let rigidBody of rigidBodies){
     rigidBody.reset();
   }
+  paused = true;
+  scriptRunning = false;
+  playButtonImg.src = "/images/Play Icon.png";
 });
+
 
 window.addEventListener("keydown", (event) => {
   if (event.key === "i") {
@@ -1241,6 +1299,112 @@ window.addEventListener("keydown", (event) => {
 
 startGame();
 
+//----------------------StateMachine-------------------------
+let states = [];
+let currentStateIndex = 0;
+class State{
+  constructor(){
+    this.started = false;
+    this.active = false;
+    this.completed = false;
+    this.startTime = 0;
+  }
+
+  onFirstExecution(){this.startTime = performance.now();}
+
+  run(){
+    if (!this.started) {
+      this.onFirstExecution()
+      this.started = true;
+      this.active = true;
+    }
+
+    if (this.completed && this.active) this.onExit();
+  }
+
+  onExit(){
+    this.active = false;
+    currentStateIndex++;
+    console.log("State Index ", currentStateIndex);
+    console.log("EXITING STATE");
+  }
+
+
+}
+
+class DriveState extends State{
+  constructor(time, direction){
+    super();
+    this.time = time;
+    this.direction = direction;
+  }
+  run(){ 
+    super.run()
+    if (performance.now() - this.startTime > this.time()) this.completed = true;
+    if (this.completed) return;
+    if (this.direction === DIRECTION.FORWARD){
+      car.accelerateTo(car.setSpeed)
+    } else {
+      car.accelerateTo(-car.setSpeed)
+    }
+  }
+
+  onExit(){
+    try {
+      console.log("braking")
+      if (!(states[currentStateIndex+1] instanceof DriveState)) car.velocity.multiplyScalar(0.5);
+    } catch {} 
+    super.onExit();
+  }
+}
+
+class RotateState extends State{
+  constructor(heading, direction){
+    super();
+    this.heading = null;
+    this.direction = direction;
+    this.getHeading = () => heading();
+  }
+
+  onFirstExecution(){
+    super.onFirstExecution();
+    this.heading = this.getHeading();
+    this.startHeading = car.heading;
+
+     if (this.direction === DIRECTION.LEFT) {
+        car.remainingRotation = -this.heading;
+    } else {
+        car.remainingRotation = this.heading;
+    }
+  }
+
+  run(){
+    super.run();
+    if (this.completed) return;
+    console.log(this.direction)
+    car.rotateToward(this.heading ,this.direction)
+    if (this.direction === DIRECTION.LEFT) {
+        if (Math.abs((car.heading - (this.startHeading - this.heading))) < 0.2) this.completed = true;
+    } else {
+        if (Math.abs((car.heading - (this.startHeading + this.heading))) < 0.2) this.completed = true;
+    }
+  }
+
+
+}
+
+class SetSpeedState extends State{
+  constructor(speed){
+    super();
+    this.speed = speed;
+  }
+
+  run(){
+    super.run();
+    car.setSpeed = this.speed();
+    this.completed = true;
+  }
+}
 //----------------------Blockly-----------------------
 //----------------------Block Definitions------------------
   const operators_compare = {
@@ -1271,15 +1435,15 @@ startGame();
 };
 Blockly.common.defineBlocks({operators_compare: operators_compare});
 
-javascript.javascriptGenerator.forBlock["operators_compare"] = function (block) {
+javascript.javascriptGenerator.forBlock["operators_compare"] = function (block, generator) {
 
-    const left = javascript.javascriptGenerator.valueToCode(
+    const left = generator.valueToCode(
         block,
         "A",
         javascript.Order.RELATIONAL
     ) || 0;
 
-    const right = javascript.javascriptGenerator.valueToCode(
+    const right = generator.valueToCode(
         block,
         "B",
         javascript.Order.RELATIONAL
@@ -1325,7 +1489,7 @@ javascript.javascriptGenerator.forBlock["operators_compare"] = function (block) 
 };
 Blockly.common.defineBlocks({operators_math: operators_math});
 
-javascript.javascriptGenerator.forBlock["operators_math"] = function (block) {
+javascript.javascriptGenerator.forBlock["operators_math"] = function (block, generator) {
    const left = javascript.javascriptGenerator.valueToCode(
         block,
         "A",
@@ -1374,17 +1538,17 @@ const operators_operation  = {
 };
 Blockly.common.defineBlocks({operators_operation: operators_operation});
 
-javascript.javascriptGenerator.forBlock["operators_operation"] = function(block) {
+javascript.javascriptGenerator.forBlock["operators_operation"] = function(block, generator) {
 
     const left =
-        javascript.javascriptGenerator.valueToCode(
+        generator.valueToCode(
             block,
             "A",
             javascript.Order.LOGICAL_AND
         ) || "false";
 
     const right =
-        javascript.javascriptGenerator.valueToCode(
+        generator.valueToCode(
             block,
             "B",
             javascript.Order.LOGICAL_AND
@@ -1417,19 +1581,19 @@ const operators_negate = {
   }
 };
 Blockly.common.defineBlocks({operators_negate: operators_negate});
-javascript.javascriptGenerator.forBlock["operators_negate"] = function(block) {
-  const value = javascriptGenerator.valueToCode(
+javascript.javascriptGenerator.forBlock["operators_negate"] = function(block, generator) {
+  const value = generator.valueToCode(
     block,
     "BOOL",
-    javascriptGenerator.ORDER_NONE
+    javascript.Order.NONE
   ) || "false";
 
-  return [`!(${value})`, javascriptGenerator.ORDER_LOGICAL_NOT];
+  return [`!(${value})`, javascript.Order.LOGICAL_NOT];
 };
 
 const logic_waitUntil = {
   init: function() {
-    this.appendValueInput('NAME')
+    this.appendValueInput('CONDITION')
     .setCheck('Boolean')
       .appendField('wait until');
     this.setInputsInline(true)
@@ -1442,9 +1606,9 @@ const logic_waitUntil = {
 };
 Blockly.common.defineBlocks({logic_waitUntil: logic_waitUntil});
                     
-javascript.javascriptGenerator.forBlock['logic_waitUntil'] = function() {
+javascript.javascriptGenerator.forBlock['logic_waitUntil'] = function(block, generator) {
   // TODO: change Order.ATOMIC to the correct operator precedence strength
-  const value_name = generator.valueToCode(block, 'NAME', javascript.Order.ATOMIC);
+  const value_condition = generator.valueToCode(block, 'CONDITION', javascript.Order.ATOMIC);
 
   // TODO: Assemble javascript into the code variable.
   const code = '...';
@@ -1464,9 +1628,13 @@ const start_block = {
   }
 };
 Blockly.common.defineBlocks({start_block: start_block});
-                                
+javascript.javascriptGenerator.forBlock['start_block'] = function(block, generator) {
+  // TODO: Assemble javascript into the code variable.
+  const code = '';
+  return code;
+}
   
-  const Movement_drive = {
+  const movement_drive = {
   init: function() {
     this.appendDummyInput('moveseconds')
       .appendField(new Blockly.FieldDropdown([
@@ -1486,18 +1654,23 @@ Blockly.common.defineBlocks({start_block: start_block});
     this.setColour(COLORS.MOVEMENT);
   }
 };
-Blockly.common.defineBlocks({Movement_drive: Movement_drive});
-javascript.javascriptGenerator.forBlock['Movement_drive'] = function() {
+Blockly.common.defineBlocks({movement_drive: movement_drive});
+javascript.javascriptGenerator.forBlock['movement_drive'] = function(block, generator) {
   const dropdown_moveoption = block.getFieldValue('moveOption');
-  const number_seconds = block.getFieldValue('seconds');
-
-
+  const number_seconds = generator.valueToCode(block, 'seconds', Blockly.JavaScript.ORDER_ATOMIC);
+  console.log(number_seconds);
+  let direction = null;
+  if (dropdown_moveoption === 'Forward') {
+    direction = DIRECTION.FORWARD;
+  } else  {
+    direction = DIRECTION.BACKWARD;
+  }
   // TODO: Assemble javascript into the code variable.
-  const code = ``;
+  const code = `states.push(new DriveState(() => ${number_seconds*1000}, ${direction}))\n`;
   return code;
 }
 
-  const Movement_turn = {
+  const movement_turn = {
   init: function() {
     this.appendDummyInput('turn_query')
       .appendField(new Blockly.FieldDropdown([
@@ -1516,19 +1689,21 @@ javascript.javascriptGenerator.forBlock['Movement_drive'] = function() {
     this.setColour(COLORS.MOVEMENT);
   }
 };
-Blockly.common.defineBlocks({Movement_turn: Movement_turn});
-javascript.javascriptGenerator.forBlock['Movement_turn'] = function() {
+Blockly.common.defineBlocks({movement_turn: movement_turn});
+javascript.javascriptGenerator.forBlock['movement_turn'] = function(block, generator) {
   const dropdown_turn_direction = block.getFieldValue('turn_direction');
-
-  // TODO: change Order.ATOMIC to the correct operator precedence strength
-  const value_degress = generator.valueToCode(block, 'degress', javascript.Order.ATOMIC);
-
-  // TODO: Assemble javascript into the code variable.
-  const code = '...';
+  const value_degress = generator.valueToCode(block, 'degrees', javascript.Order.ATOMIC);
+  let direction = null;
+  if (dropdown_turn_direction === "R"){
+    direction = DIRECTION.RIGHT;
+  } else {
+    direction = DIRECTION.LEFT; 
+  }
+  const code = `states.push(new RotateState(()=>${value_degress}, ${direction}))\n`;
   return code;
 }
 
-const Movement_speed = {
+const movement_speed = {
   init: function() {
     this.appendValueInput('speed')
     .setCheck('Number')
@@ -1543,20 +1718,63 @@ const Movement_speed = {
     this.setColour(COLORS.MOVEMENT);
   }
 };
-Blockly.common.defineBlocks({Movement_speed: Movement_speed});
-javascript.javascriptGenerator.forBlock['Movement_speed'] = function() {
+Blockly.common.defineBlocks({movement_speed: movement_speed});
+javascript.javascriptGenerator.forBlock['movement_speed'] = function(block, generator) {
   // TODO: change Order.ATOMIC to the correct operator precedence strength
   const value_speed = generator.valueToCode(block, 'speed', javascript.Order.ATOMIC);
 
+  console.log(value_speed);
+  // TODO: Assemble javascript into the code variable.
+  const code = `states.push(new SetSpeedState(() => ${value_speed}))\n`;
+  return code;
+}  
+
+const movement_moveForward = {
+  init: function() {
+    this.appendDummyInput('directionField')
+      .appendField(new Blockly.FieldDropdown([
+          ['move forward', 'FWD'],
+          ['move backward', 'BWD']
+        ]), 'direction');
+    this.setInputsInline(true)
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip('Move forward/backward without stopping until "brake" is run');
+    this.setHelpUrl('');
+    this.setColour(COLORS.MOVEMENT);
+  }
+};
+Blockly.common.defineBlocks({movement_moveForward: movement_moveForward});
+javascript.javascriptGenerator.forBlock['movement_moveForward'] = function(block, generator) {
+  const dropdown_name = block.getFieldValue('direction');
 
   // TODO: Assemble javascript into the code variable.
   const code = '...';
   return code;
-}       
+}   
+
+const movement_brake = {
+  init: function() {
+    this.appendDummyInput('text')
+      .appendField('brake');
+    this.setInputsInline(true)
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip('Stops the car immediately');
+    this.setHelpUrl('');
+    this.setColour(COLORS.MOVEMENT);
+  }
+};
+Blockly.common.defineBlocks({movement_brake: movement_brake});
+javascript.javascriptGenerator.forBlock['movement_brake'] = function(block, generator) {
+  // TODO: Assemble javascript into the code variable.
+  const code = '...';
+  return code;
+}
                     
 const sensors_trafficLight = {
   init: function() {
-    this.appendDummyInput('NAME')
+    this.appendDummyInput('lightColor')
       .appendField(new Blockly.FieldDropdown([
          ['is traffic light red ?', 'R'],
           ['is traffic light yellow ?', 'G'],
@@ -1572,8 +1790,8 @@ const sensors_trafficLight = {
 };
 Blockly.common.defineBlocks({sensors_trafficLight: sensors_trafficLight});
                     
-  javascript.javascriptGenerator.forBlock['Sensors_trafficLight'] = function() {
-  const dropdown_name = block.getFieldValue('NAME');
+  javascript.javascriptGenerator.forBlock['sensors_trafficLight'] = function(block, generator) {
+  const dropdown_name = block.getFieldValue('lightColor');
 
   // TODO: Assemble javascript into the code variable.
   const code = '...';
@@ -1592,7 +1810,7 @@ const sensors_getSpeed = {
   }
 };
 Blockly.common.defineBlocks({sensors_getSpeed: sensors_getSpeed});
-javascript.javascriptGenerator.forBlock['sensors_getSpeed'] = function() {
+javascript.javascriptGenerator.forBlock['sensors_getSpeed'] = function(block, generator) {
 
   // TODO: Assemble javascript into the code variable.
   const code = '...';
@@ -1611,7 +1829,7 @@ const sensors_getMaxSpeed = {
   }
 };
 Blockly.common.defineBlocks({sensors_getMaxSpeed: sensors_getMaxSpeed});
-javascript.javascriptGenerator.forBlock['sensors_getMaxSpeed'] = function() {
+javascript.javascriptGenerator.forBlock['sensors_getMaxSpeed'] = function(block, generator) {
 
   // TODO: Assemble javascript into the code variable.
   const code = '...';
@@ -1626,11 +1844,11 @@ const toolbox = {
         {
     kind: "category",
     name: "Movement",
-    colour: "#ffe100",
+    colour: COLORS.MOVEMENT,
     contents: [
      {
         kind: "block",
-        type: "Movement_drive",
+        type: "movement_drive",
         inputs: {
         seconds: {
               shadow: {
@@ -1644,24 +1862,32 @@ const toolbox = {
       }, 
       {
         kind: "block", 
-        type: "Movement_turn",
+        type: "movement_turn",
         inputs: {
           degrees: numberShadow(0)
     }
       },
       {
         kind: "block",
-        type: "Movement_speed",
+        type: "movement_speed",
         inputs: {
           speed: numberShadow(0)
         }
+      },
+      {
+        kind: "block",
+        type: "movement_moveForward"
+      },
+      {
+        kind: "block",
+        type: "movement_brake"
       }
     ]
 },
 {
     kind: "category",
     name: "Logic",
-    colour: "#5e0eff",
+    colour: COLORS.LOGIC,
     contents: [
                 {
                     kind: "block",
@@ -1680,7 +1906,7 @@ const toolbox = {
 {
     kind: "category",
     name: "Operators",
-    colour: "#ff0e0e",
+    colour: COLORS.OPERATORS,
     contents: [
                 {
                     kind: "block",
@@ -1711,7 +1937,7 @@ const toolbox = {
 {
     kind: "category",
     name: "Loops",
-    colour: "#12ff0e",
+    colour: COLORS.LOOPS,
     contents: [ {
                     kind: "block",
                     type: "controls_repeat_ext",
@@ -1732,7 +1958,7 @@ const toolbox = {
 {
     kind: "category",
     name: "Sensors",
-    colour: "#ff0eef",
+    colour: COLORS.SENSORS,
     contents: [
       {
         kind: "block",
@@ -1823,6 +2049,10 @@ const workspace = Blockly.inject(document.getElementById("blocklyDiv"), {
   }
 });
 
+const generator = javascript.javascriptGenerator;
+
+generator.init(workspace);
+
 function numberShadow(value = 0) {
     return {
         shadow: {
@@ -1833,7 +2063,34 @@ function numberShadow(value = 0) {
         }
     };
 }
+let scriptRunning = false;
+function runScript() {
+  if (scriptRunning) return;
+  scriptRunning = true;
+  currentStateIndex = 0;
+  states = [];
+  const topBlocks = workspace.getTopBlocks();
 
+  const startBlock = topBlocks.find(
+        block => block.type === "start_block"
+    );
+  const code = generator.blockToCode(startBlock);
+  console.log(code);
+  eval(code);
+  scriptLoop();
+}
+function scriptLoop() {
+  
+  //running the state
+  if (currentStateIndex >= states.length || !scriptRunning){ 
+    scriptRunning = false;
+    console.log("Script finished");
+    return;
+  };
+  states[currentStateIndex].run();
+
+ if (!paused) requestAnimationFrame(scriptLoop);
+}
 const panelContainer = document.getElementById("panelContainer");
 const pannelButton = document.getElementById("panelButton");
 const panelArrow = document.getElementById("panelArrow");
@@ -1855,7 +2112,6 @@ pannelButton.addEventListener("click", () => {
 workspace.addChangeListener(() => {
     numBlocks = workspace.getAllBlocks().filter(block => !block.isShadow()).length;
     blockCounter.textContent = `Blocks: ${numBlocks}`;
-    console.log("CHANGE");
 });
 
 
