@@ -168,6 +168,23 @@ class Level{
     this.updateStars();
   }
 
+  static getAllStars(){
+    let stars = [];
+    for (let level of levels){
+      stars.push(...level.stars);
+    }
+    return stars;
+  }
+
+  static assignStars(stars){
+    let starArray = stars;
+    for(let level of levels){
+      level.editStars(new Array(starArray[0], starArray[1], starArray[2]))
+      starArray = starArray.slice(3);
+      level.updateStars();
+    }
+  }
+
   restart(){
     WinScreen.stars.forEach((star, index) => {
       star.classList.remove("starActive");
@@ -220,7 +237,10 @@ class Level{
   }
 
    activate(){
+    save();
+    workspace.clear();
     currentLvl = this.lvlNum;
+    load();
     canvasObjects = [];
     rigidBodies = [];
     canvasObjects = this.objectList;
@@ -967,7 +987,6 @@ class WinAreaMarker extends FloatingObject{
         top > canvas.height / 2;         // completely below
 
     if (outOfView) {
-        console.log(this.EdgeScreenCords);
         this.arrow.active = true;
         
     } else {
@@ -1324,6 +1343,7 @@ let background = new Background(backgroundImage);
 function loop(){
   if (overlayActive || !panelActive) {
     updateOverlay();
+    save();
     lastUpdateForTimer = performance.now();
    requestAnimationFrame(loop); //To Pause if Overlay is on
     return;
@@ -1366,7 +1386,7 @@ let car = null;
 async function startGame() {
   await preloadImages();
     new Level(backgroundImage, "Test", backgroundImage, 10, 80, new Point(620, -200), 0)
-    .addObjects(new Array(...new WinArea(700, 400, 0, 200, 500, true).WinMarkerPackage,new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings)).editStars(new Array(1,0,1));
+    .addObjects(new Array(...new WinArea(700, 400, 0, 200, 500, true).WinMarkerPackage,new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
 
     new Level(backgroundImage, "Test2", backgroundImage, 10, 80, new Point(-320, 0) ,  0)
     .addObjects(new Array(new WinArea(700, 400, 0, 200, 100),new Billboard(320, 320), new Billboard(500, 320), new Billboard(320, 500)));
@@ -1378,6 +1398,7 @@ async function startGame() {
   );
   levels[currentLvl-1].activate();
   lastUpdateForTimer = performance.now();
+  load();
   loop();
   paused = true; //So it can draw the initial frame
 }
@@ -1625,7 +1646,9 @@ window.addEventListener("keydown", (event) => {
   if (event.key === "i") {
     debugMode = !debugMode;
   }
-
+  if (event.key === "r"){
+    clearSavedData();
+  }
   
 });
 
@@ -2617,5 +2640,32 @@ workspace.addChangeListener(() => {
     blockCounter.textContent = `Blocks: ${numBlocks}`;
 });
 
+function save(){
+  let state = Blockly.serialization.workspaces.save(workspace);
+  localStorage.setItem(`level${currentLvl}`, JSON.stringify(state));
+  localStorage.setItem("maxLevel", maxLvl);
+  localStorage.setItem("stars", JSON.stringify(Level.getAllStars()))
+}
 
+function load(){
+  const state = JSON.parse(localStorage.getItem(`level${currentLvl}`));
+  if (state === null) {
+    console.log("New Save", state);
+    return;
+  }
+     Blockly.serialization.workspaces.load(state, workspace);
+  maxLvl = localStorage.getItem("maxLevel");
+  Level.assignStars(JSON.parse(localStorage.getItem("stars")));
 
+}
+load()
+function clearSavedData(){
+  maxLvl = 1
+  for (let level of levels){
+    level.editStars(new Array(0,0,0));
+    level.updateStars
+  }
+  Level.updateLevelAvailability();
+  workspace.clear();
+  localStorage.clear();
+}
