@@ -42,7 +42,7 @@
 
             <div class = "canvasOverlayContainer">
             <div class="canvasOverlay">
-              <div id = "CarChange" class="menu">
+              <div id ="CarChange" class="menu">
                 <h1 class="CarChangeTitle">Car Changer</h1>
                   <img id="CarPreview" class="CarPreview" height="40%" src="images/Cars/Black_Car1.png">
                   <div class="Changer">
@@ -72,32 +72,56 @@
                 <div class="levelsContainer">          
                 </div>
               </div>
+              <div id="winScreen" class="menu">
+                <div class="winScreenContainer">
+                  <div id="winTitle" class="CarChangeTitle">You Win</div>
+                  <div class="LevelNum">Level 1</div>
+                  <div class="winStarContainer">
+                    <div class="star1">
+                      <img height="70px" class="star" src="/images/Star Empty.png">
+                      <div>Completed</div>
+                    </div>
+                    <div class="star2"><img height="120px" class="star" src="/images/Star Empty.png">
+                      <div>Blocks</div>
+                    </div>
+                    <div class="star3"><img height="70px" class="star" src="/images/Star Empty.png">
+                      <div>Time</div>
+                    </div>
+                    
+                  </div>
+                  <div class="NextLevelWinScreenContainer">
+                    <button class="NextLevelButton">Next Level</button>
+                    <button class="LevelSelectWinScreen"><img height="50px" src="/images/Level Selector Icon.png"></button>
+                  </div>
+                  <button class="ReturnButton">Return</button>
+                </div>
+              </div>
               </div>
             </div></div>
             
             <div class="canvasButtonsContainer">
                   <div class="NormalButtonsContainer"> <!--Normal Buttons-->
               <button id="carChangerButton" class="canvasButton">
-                <img  src="/images/Car Changer Icon.png">
+                <img draggable="false" src="/images/Car Changer Icon.png">
               </button>
 
               <button id="levelSelectorButton" class="canvasButton">
-                <img src="/images/Level Selector Icon.png">
+                <img draggable="false" src="/images/Level Selector Icon.png">
               </button>
 
               <button id="lockView" class="canvasButton">
-                <img src="/images/Settings Icon.png">
+                <img draggable="false" src="/images/Lock Cam Icon.png">
               </button>
                   </div>
 
                   <div class="PlayButtonsContainer"><!--Play Buttons-->
 
                     <button id="playButton" class="canvasButton">
-                        <img  src="/images/Play Icon.png">
+                        <img draggable="false"  src="/images/Play Icon.png">
                     </button>
 
                     <button id="restartButton" class="canvasButton">
-                       <img  src="/images/Restart Icon.png">
+                       <img draggable="false" src="/images/Restart Icon.png">
                     </button>
                   </div> 
 

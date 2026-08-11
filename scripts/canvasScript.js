@@ -10,12 +10,19 @@ const DIRECTION = {
 let levels = [];
 let maxLvl = 1;
 let currentLvl = 1;
+let numBlocks = 0;
+let timer = 0;
+let fpsTimer = 0;
+let fpsLastUpdate = performance.now();
+let lastUpdateForTimer = performance.now();
+let showWinAreaArrow = true;
 const canvas = document.querySelector(".canvasPopup");
 const panel = document.querySelector(".panel")
 const ctx = canvas.getContext("2d");
 const panelOverlay = document.querySelector(".canvasOverlay");
 const levelContainer = document.querySelector(".levelsContainer");
 const blockCounter = document.querySelector(".blockCounter");
+const lockCamImg = document.querySelector("#lockView img");
 const COLORS = {
     MOVEMENT: "#FFC800",   // Bright yellow
     LOGIC: "#8B3DFF",      // Bright purple
@@ -48,6 +55,7 @@ let trashcanImages = [];
 let trafficLightImages = [];
 let thinBuildings = [];
 let images = {};
+let WinMarkerImg = [];
 async function preloadImages() {
   let promises = [];
   for (let i = 1; i <= 7; i++) {
@@ -94,6 +102,11 @@ async function preloadImages() {
       );
     }
     thinBuildings = await Promise.all(promises);
+
+    promises = [];
+    promises.push(loadImage("/images/WinAreaMarker.png"));
+    promises.push(loadImage("/images/WinMarkerArrow.png"));
+    WinMarkerImg = await Promise.all(promises);
 };
 
 
@@ -101,29 +114,94 @@ const levelSelectorButton = document.getElementById("levelSelectorButton");
 const playButton = document.getElementById("playButton");
 const restartButton = document.getElementById("restartButton");
 const playButtonImg = document.querySelector("#playButton img");
+const WinScreen = {
+  LevelNum: document.querySelector(".LevelNum"),
+  stars: document.querySelectorAll(".star"),
+  NextLevelButton: document.querySelector(".NextLevelButton"),
+  LevelSelectButton: document.querySelector(".LevelSelectWinScreen"),
+  ReturnButton: document.querySelector(".ReturnButton"),
+  Star2Text: document.querySelector(".star2 div"),
+  Star3Text: document.querySelector(".star3 div"),
+}
+
+WinScreen.NextLevelButton.addEventListener("click", ()=>{
+  currentLvl++;
+  levels[currentLvl-1].activate();
+  deactivateWinScreen();
+  restartLevel();
+  paused = true;
+  
+});
+
+WinScreen.LevelSelectButton.addEventListener("click", ()=>{
+  console.log("Level Select Button Clicked");
+  overlayNum = 2;
+  updateOverlay();
+});
+
+WinScreen.ReturnButton.addEventListener("click", ()=>{
+  deactivateWinScreen();
+  restartLevel();
+  paused = true;
+});
 
 class Level{
-  constructor(backgroundImage, title, description, preview, carStartPoint, heading = 0){
+  constructor(backgroundImage, title, preview, maxBlocks, maxSeconds ,carStartPoint, heading = 0, ){
     levels.push(this);
     this.backgroundImage = backgroundImage;
     this.title = title;
-    this.description = description;
     this.lvlNum = levels.indexOf(this) + 1;
     this.objectList = [];
     this.preview = preview;
+    this.maxBlocks = maxBlocks;
     this.stars = [0,0,0];
     this.element = this.createElement();
     this.carStartPoint = carStartPoint;
     this.carStartHeading = heading;
+    this.maxSeconds = maxSeconds;
   }
-
- 
 
   editStars(array){
     for (let i=0; i < this.stars.length; i++){
        this.stars[i] = array[i];
     }
     this.updateStars();
+  }
+
+  restart(){
+    WinScreen.stars.forEach((star, index) => {
+      star.classList.remove("starActive");
+    });
+  }
+
+  finished(){
+    
+    this.editStars([1,(numBlocks <= this.maxBlocks) ? 1 : 0, (timer/1000 <= this.maxSeconds) ? 1 : 0]); //TODO: Still Need to add Timer and Star Trigger
+    if (maxLvl === this.lvlNum) maxLvl+=1;
+    Level.updateLevelAvailability();
+    WinScreen.stars.forEach((star, index) => {
+      if (this.stars[index] === 1){
+        star.src = "/images/Star Full.png";
+      }
+    
+   star.classList.add("starActive");
+    })
+    WinScreen.LevelNum.textContent = `Level ${this.lvlNum}`;
+    WinScreen.Star2Text.textContent = `> ${this.maxBlocks} Blocks`;
+    WinScreen.Star3Text.textContent = `> ${Math.floor(this.maxSeconds/60) + ":" + (this.maxSeconds % 60).toString().padStart(2, '0')}`;
+    
+  }
+
+  static updateLevelAvailability(){
+    for (let level of levels){
+      level.element.classList.remove("locked");
+      if (maxLvl < level.lvlNum){
+        level.element.classList.add("locked");
+      }
+    level.updateStars();
+  }
+  
+    
   }
 
   addObjects(array){
@@ -176,6 +254,8 @@ class Level{
       this.activate();
       overlayActive = false;
       updateOverlay();
+      restartLevel();
+      paused = true;
     });
     levelContainer.append(module);
     this.updateStars();
@@ -211,12 +291,23 @@ class CanvasObject {
   }
 
   get bottomY(){
-    return this.y - this.height
+    return this.actualY - this.height
   }
 
   static sortCanvasObjects() {
-    canvasObjects.sort((a, b) => b.bottomY - a.bottomY); //Sorting from smallest z to largest z
-  }
+    canvasObjects.sort((a, b) => {
+        const aFloating = a instanceof FloatingObject;
+        const bFloating = b instanceof FloatingObject;
+
+        // FloatingObjects go last
+        if (aFloating !== bFloating) {
+            return aFloating ? 1 : -1;
+        }
+
+        // Tie-breaker: bottomY
+        return b.bottomY - a.bottomY;
+    });
+}
 
   draw() {
     ctx.save();
@@ -245,7 +336,16 @@ class CanvasObject {
 }
 let canvasObjects = [CanvasObject]; //Only Objects on the canvas
 
+class FloatingObject extends CanvasObject {
+  constructor(x, y, image, scale = 1, heading = 0) {
+    if (new.target === FloatingObject) {
+      throw new console.error("Cannot Instantiate Floating Object");
+    }
+    super(x, y, image, scale, heading);
+  }
 
+
+}
 class ConcreteObject extends CanvasObject {
   constructor(x, y, image, scale = 1, heading = 0, hitboxXOffset = 0, hitboxYOffset = 0, hitboxWidth = image.width, hitboxHeight = image.height) {
     if (new.target === ConcreteObject) {
@@ -373,8 +473,11 @@ class RigidBody extends ConcreteObject {
     this.collisionImmunity = 0;
     this.constrained = true;
     this.mass = mass;
-    this.fillColor = "blue";
+    this.baseColor = "blue";
+    this.fillColor = this.baseColor;
     this.k = 0.5;
+    this.friction = 0.97;
+    this.solid = true;
     }
 
     reset(){
@@ -382,6 +485,8 @@ class RigidBody extends ConcreteObject {
     this.rotateTo(this.startHeading);
     this.velocity = new Victor(0, 0);
   }
+
+  
 
   drawVector(){
     if (!debugMode) return;
@@ -442,11 +547,12 @@ class RigidBody extends ConcreteObject {
       }
       if (this.constrained) {return;}
       for (let rigidBody of rigidBodies){
+        if (!rigidBody.solid) {
+          continue;
+        }
         //Collision
           if(this.collide(rigidBody)){
          rigidBody.fillColor = "lime";
-         
-         
          let collision = this.getMTV(rigidBody);
         if (collision === null) return;
         rigidBody.onCollision(this);
@@ -463,7 +569,7 @@ class RigidBody extends ConcreteObject {
       
          } else {
           if (rigidBody === this) return;
-          rigidBody.fillColor = "blue";
+          rigidBody.fillColor = this.baseColor;
          }
          
         
@@ -613,6 +719,11 @@ static angleDifference(a, b) {
            projB[0] <= projA[1];
   }
 
+  within(projA, projB) {
+    return (projA[0] >= projB[0] && projA[1] <= projB[1]) ||
+           (projB[0] >= projA[0] && projB[1] <= projA[1]);
+}
+
   collide(rigidBody){
     if (this === rigidBody) return false; 
     let axes = [this.axes, rigidBody.axes].flat();
@@ -629,6 +740,25 @@ static angleDifference(a, b) {
 
     return true; // no separating axis found, collision detected
   }
+
+  inside(rigidBody){
+     if (this === rigidBody) return false; 
+    let axes = [this.axes, rigidBody.axes].flat();
+
+     for (let axisInfo of axes) {
+        let axis = axisInfo.normal;
+        let projectionA = this.project(axis);
+        let projectionB = rigidBody.project(axis);
+
+        if (!this.within(projectionA, projectionB)) {
+            return false; // not within
+        }
+    }
+
+    return true; // within
+  }
+
+
 
   getMTV(rigidBody) {
     if (this.collide(rigidBody) === false) {
@@ -809,21 +939,162 @@ class Barrier extends RigidBody {
   constructor(x, y, heading = 0, hitboxWidth = 20, hitboxHeight = 20) {
     
     super(x, y, new Image(hitboxWidth, hitboxHeight), Infinity, 1, heading, 0, 0, hitboxWidth, hitboxHeight);
-    this.fillColor = "blue";
+    this.baseColor = "pink";
   }
   
 }
 
-class FloatingObject extends CanvasObject {
-  constructor(x, y, z, image, scale = 1, heading = 0) {
-    if (new.target === FloatingObject) {
-      throw new console.error("Cannot Instantiate Floating Object");
+class WinAreaMarker extends FloatingObject{
+  constructor(winArea){
+    super(winArea.x - winArea.width/2 + WinMarkerImg[0].width*0.08, winArea.y -winArea.height/2 + WinMarkerImg[0].height*0.08, WinMarkerImg[0], 0.16, 0)
+    this.arrow = new WinAreaArrow(this);
+}
+
+  update(){
+
+    super.update();
+
+    const left = this.actualX;
+    const right = this.actualX + this.width;
+
+    const top = this.actualY;
+    const bottom = this.actualY + this.height;
+
+    const outOfView =
+        right < -canvas.width / 2 ||     // completely left
+        left > canvas.width / 2 ||        // completely right
+        bottom < -canvas.height / 2 ||   // completely above
+        top > canvas.height / 2;         // completely below
+
+    if (outOfView) {
+        console.log(this.EdgeScreenCords);
+        this.arrow.active = true;
+        
+    } else {
+      this.arrow.active = false;
     }
-    super(x, y, z, image, scale, heading);
-  }
+    this.arrow.update();
+}
+
 
 
 }
+
+class WinAreaArrow extends FloatingObject{
+  constructor(marker){
+    super(0, 0, WinMarkerImg[1], 0.1, 0)
+    this.marker = marker;
+    this.active = false;
+  }
+
+  update(){
+    if (this.active && showWinAreaArrow){
+      this.draw(this.EdgeScreenCords.x, this.EdgeScreenCords.y, this.EdgeHeading)
+    }
+  }
+
+   draw(x, y, heading = 0) {
+    ctx.save(); 
+    ctx.translate(x, y ); //this.width / 2 is center of the picture
+    ctx.rotate(toRadians(heading));
+    ctx.drawImage(this.image, (-this.width/2), (-this.height/2), this.width, this.height);
+    ctx.restore();
+  }
+  
+  get EdgeScreenCords(){
+ let vector = new Victor(this.marker.actualX + this.marker.width/2, this.marker.actualY + this.marker.height/2);
+
+const angle = vector.angle();
+const angleDeg = toDegrees(angle);
+
+const halfWidth = canvas.width / 2;
+const halfHeight = canvas.height / 2;
+
+// Angle from horizontal to the corner
+const cornerAngle = toDegrees(
+    Math.atan2(halfHeight, halfWidth)
+);
+
+if (Math.abs(angleDeg) <= cornerAngle) {
+
+    // Right
+    let x = halfWidth;
+    let y = x * Math.tan(angle);
+
+    return new Point(x, y);
+
+} else if (Math.abs(angleDeg) >= 180 - cornerAngle) {
+
+    // Left
+    let x = -halfWidth;
+    let y = x * Math.tan(angle);
+
+    return new Point(x, y);
+
+} else if (angleDeg > cornerAngle && angleDeg < 180 - cornerAngle) {
+
+    // Bottom/top depending on your coordinate system
+    let y = halfHeight ;
+    let x = y / Math.tan(angle);
+
+    return new Point(x, y);
+
+} else {
+
+    // Opposite vertical side
+    let y = -halfHeight;
+    let x = y / Math.tan(angle);
+
+    return new Point(x, y);
+}
+}
+
+get EdgeHeading(){
+   let vector = new Victor(this.marker.actualX + this.marker.width/2 , this.marker.actualY + this.marker.height/2);
+   return vector.angleDeg();
+}
+}
+class WinArea extends RigidBody{
+constructor(x, y, heading = 0, width = 100, height = 100, needsInside = false){
+  super(x, y, new Image(width, height), Infinity, 1, heading, 0, 0, width, height);
+  this.solid = false;
+  this.needsInside = needsInside;
+  this.fillColor = "yellow";
+  this.baseColor = "yellow";
+  this.marker = new WinAreaMarker(this);
+  this.WinMarkerPackage = [this, this.marker];
+}
+
+  update(){
+    super.update();
+    ctx.strokeStyle = this.baseColor;
+    ctx.lineWidth = 5;
+
+    ctx.beginPath();
+    ctx.moveTo(this.hitboxPoints[0].x, this.hitboxPoints[0].y);
+
+    for (let i = 1; i < this.hitboxPoints.length; i++) {
+        ctx.lineTo(this.hitboxPoints[i].x, this.hitboxPoints[i].y);
+    }
+
+    ctx.closePath();
+    ctx.stroke();
+    if (this.needsInside){
+      if (car.inside(this)){
+        activateWinScreen();
+        levels[currentLvl-1].finished();
+      }
+      return;
+    }
+  if (this.collide(car)){
+    activateWinScreen();
+    levels[currentLvl-1].finished();
+  }
+  }
+
+}
+
+
 class PlayerCar extends RigidBody {
   constructor(x, y, image, heading = 0){
     super(x, y, image, 45 , 1.3, heading);
@@ -834,6 +1105,10 @@ class PlayerCar extends RigidBody {
     this.constrained=false;
     this.setSpeed = 25;
     this.remainingRotation = 0;
+  }
+
+  correctVelocity(){
+
   }
 
   reset(){
@@ -897,12 +1172,18 @@ class PlayerCar extends RigidBody {
       
          } else {
           if (rigidBody === this) return;
-          rigidBody.fillColor = "blue";
+          rigidBody.fillColor = rigidBody.baseColor;
          }
     });
   }
 
+  getSpeed(){
+    return this.speed;
+  }
 
+  getSetSpeed(){
+    return this.setSpeed;
+  }
 
   moveForward(units){
     this.x -= (units * Math.sin(toRadians(this.heading))); //units is negative because otherwise it goes backwards
@@ -974,8 +1255,11 @@ class Camera {
     this.y += this.dy;
     this.dy = 0;
     if (lockView) {
-      this.x = car.x;
-      this.y = car.y;
+      this.x = car.x - car.width / 2;
+      this.y = car.y - car.height / 2;
+      lockCamImg.src = "/images/Lock Cam Active Icon.png";
+    } else {
+      lockCamImg.src = "/images/Lock Cam Icon.png";
     }
   }
 
@@ -1040,10 +1324,16 @@ let background = new Background(backgroundImage);
 function loop(){
   if (overlayActive || !panelActive) {
     updateOverlay();
-    
+    lastUpdateForTimer = performance.now();
    requestAnimationFrame(loop); //To Pause if Overlay is on
     return;
   } 
+  if (!paused){
+     timer += performance.now() - lastUpdateForTimer;
+  } 
+  lastUpdateForTimer = performance.now();
+  fpsTimer = performance.now() - fpsLastUpdate;
+  fpsLastUpdate = performance.now();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -1056,8 +1346,15 @@ function loop(){
   canvasObjects.forEach((object) => {
     object.update();
   });
-
-  requestAnimationFrame(loop);
+    const textSize = 40/camera.zoom
+    let timerInSec = timer/1000;
+    ctx.font = `bold ${textSize}px Arial`;
+    ctx.fillStyle = "white";
+    ctx.fillText(`${Math.floor(timerInSec/60) + ":" + (Math.floor(timerInSec % 60)).toString().padStart(2, '0')}`, -textSize, -canvas.height/(2.65 * camera.zoom) - textSize);
+    if (debugMode){ 
+      ctx.fillText(`${Math.round(1000/fpsTimer)} fps`, canvas.width/(3*camera.zoom), -canvas.height/(2.65 * camera.zoom) - textSize)
+    }
+    requestAnimationFrame(loop);
 
 }
 
@@ -1068,8 +1365,11 @@ let car = null;
 
 async function startGame() {
   await preloadImages();
-    new Level(backgroundImage, "Test", "This is a test Level", backgroundImage, new Point(600, -200), 0).addObjects(new Array(new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings)).editStars(new Array(1,0,1));
-    new Level(backgroundImage, "Test2", "This is a test Level", backgroundImage, new Point(-320, 0) ,  0).addObjects(new Array(new Billboard(320, 320), new Billboard(500, 320), new Billboard(320, 500)));
+    new Level(backgroundImage, "Test", backgroundImage, 10, 80, new Point(620, -200), 0)
+    .addObjects(new Array(...new WinArea(700, 400, 0, 200, 500, true).WinMarkerPackage,new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings)).editStars(new Array(1,0,1));
+
+    new Level(backgroundImage, "Test2", backgroundImage, 10, 80, new Point(-320, 0) ,  0)
+    .addObjects(new Array(new WinArea(700, 400, 0, 200, 100),new Billboard(320, 320), new Billboard(500, 320), new Billboard(320, 500)));
     car = new PlayerCar(
     500,
     40,
@@ -1077,6 +1377,7 @@ async function startGame() {
     90
   );
   levels[currentLvl-1].activate();
+  lastUpdateForTimer = performance.now();
   loop();
   paused = true; //So it can draw the initial frame
 }
@@ -1125,6 +1426,7 @@ function resizeCanvas() {
 
 const carChangeMenu = document.getElementById("CarChange");
 const levelSelectorMenu = document.getElementById("levelSelector");
+const winScreen = document.getElementById("winScreen");
  
 function updateOverlay(){
   disableAllOverlays();
@@ -1138,9 +1440,20 @@ function updateOverlay(){
     carChangeMenu.style.height = "";
     levelSelectorMenu.style.width = "0";
     levelSelectorMenu.style.height = "0";
+    winScreen.style.width = "0";
+    winScreen.style.height = "0";
   } else if(overlayNum === 2){
     levelSelectorMenu.style.width = "";
     levelSelectorMenu.style.height = "";
+    carChangeMenu.style.width = "0";
+    carChangeMenu.style.height = "0";
+    winScreen.style.width = "0";
+    winScreen.style.height = "0";
+  } else if (overlayNum === 3){
+    winScreen.style.width = "";
+    winScreen.style.height = "";
+    levelSelectorMenu.style.width = "0";
+    levelSelectorMenu.style.height = "0";
     carChangeMenu.style.width = "0";
     carChangeMenu.style.height = "0";
   }
@@ -1150,7 +1463,11 @@ function updateOverlay(){
 
 function disableAllOverlays(){
   carChangeMenu.style.width = 0;
+  carChangeMenu.style.height = 0;
   levelSelectorMenu.style.width = 0;
+  levelSelectorMenu.style.height = 0;
+  winScreen.style.width = 0;
+  winScreen.style.height = 0;
 }
 
 resizeCanvas();
@@ -1260,8 +1577,19 @@ levelSelectorButton.addEventListener("click", ()=>{
   updateOverlay();
 });
 
+function activateWinScreen(){
+  overlayActive = true;
+  overlayNum = 3;
+  updateOverlay();
+}
+
+function deactivateWinScreen(){
+  overlayActive = false;
+  updateOverlay();
+}
+
 lockViewButton.addEventListener("click", ()=>{
-  lockView = true;
+  lockView = !lockView;
 })
 
 
@@ -1270,7 +1598,6 @@ playButton.addEventListener("click", () =>{
 
   if (!paused){
     playButtonImg.src = "/images/Pause Icon.png";
-    console.log(scriptRunning);
     runScript();
   } else {
     playButtonImg.src = "/images/Play Icon.png";
@@ -1278,14 +1605,20 @@ playButton.addEventListener("click", () =>{
   
 });
 
-restartButton.addEventListener("click", ()=>{
-  for (let rigidBody of rigidBodies){
+restartButton.addEventListener("click", restartLevel);
+
+function restartLevel(){
+for (let rigidBody of rigidBodies){
     rigidBody.reset();
   }
   paused = true;
+  timer = 0;
+  lastUpdateForTimer = performance.now();
   scriptRunning = false;
+  canRunScript = true;
+  levels[currentLvl-1].restart();
   playButtonImg.src = "/images/Play Icon.png";
-});
+}
 
 
 window.addEventListener("keydown", (event) => {
@@ -1301,16 +1634,34 @@ startGame();
 
 //----------------------StateMachine-------------------------
 let states = [];
+let behaviors = [];
 let currentStateIndex = 0;
 class State{
   constructor(){
     this.started = false;
     this.active = false;
     this.completed = false;
-    this.startTime = 0;
+    this.elapsedTime = 0;
+    this.lastUpdate = 0;
   }
 
-  onFirstExecution(){this.startTime = performance.now();}
+  getElaspedTime(){
+        if (paused) {
+            // Don't accumulate time while paused.
+            this.lastUpdate = performance.now();
+            return;
+        }
+
+        const now = performance.now();
+        this.elapsedTime += now - this.lastUpdate;
+        this.lastUpdate = now;
+    return this.elapsedTime;
+  }
+
+  onFirstExecution(){
+    this.index = states.indexOf(this);
+   this.lastUpdate = performance.now();
+  }
 
   run(){
     if (!this.started) {
@@ -1336,11 +1687,20 @@ class DriveState extends State{
   constructor(time, direction){
     super();
     this.time = time;
+    console.log(this.time);
+    console.log(typeof this.time);
+    console.log(this.time());
     this.direction = direction;
   }
+
+  onFirstExecution(){
+    super.onFirstExecution()
+    this.lastUpdate = performance.now();
+  }
+
   run(){ 
-    super.run()
-    if (performance.now() - this.startTime > this.time()) this.completed = true;
+    super.run();
+    if (this.getElaspedTime() >= (this.time() *1000)) this.completed = true;
     if (this.completed) return;
     if (this.direction === DIRECTION.FORWARD){
       car.accelerateTo(car.setSpeed)
@@ -1351,8 +1711,8 @@ class DriveState extends State{
 
   onExit(){
     try {
-      console.log("braking")
-      if (!(states[currentStateIndex+1] instanceof DriveState)) car.velocity.multiplyScalar(0.5);
+      if (!(states[currentStateIndex+1] instanceof DriveState)) states.splice(this.index+1, 0, new BrakeState());
+      console.log(states);
     } catch {} 
     super.onExit();
   }
@@ -1381,7 +1741,6 @@ class RotateState extends State{
   run(){
     super.run();
     if (this.completed) return;
-    console.log(this.direction)
     car.rotateToward(this.heading ,this.direction)
     if (this.direction === DIRECTION.LEFT) {
         if (Math.abs((car.heading - (this.startHeading - this.heading))) < 0.2) this.completed = true;
@@ -1405,6 +1764,101 @@ class SetSpeedState extends State{
     this.completed = true;
   }
 }
+
+class BrakeState extends State{
+  constructor(){
+    super();
+    this.ticks = 5;
+  }
+
+  onFirstExecution(){
+    behaviors.forEach((behavior) => {
+      if(behavior instanceof DriveBehavior) behavior.completed = true;
+    });
+  }
+
+  run(){
+    super.run();
+    if (this.completed) return;
+    car.velocity.multiplyScalar(0.75);
+    this.ticks--;
+    if (this.ticks <= 0) this.completed = true;
+  }
+
+
+}
+
+class AddDriveBehaviorState extends State{
+  constructor(direction){
+    super();
+    this.direction = direction;
+  }
+
+  run(){
+    this.completed = true;
+    super.run();
+    behaviors.push(new DriveBehavior(this.direction));
+  }
+}
+
+class WaitState extends State{
+  constructor(time){
+    super();
+    this.time = time;
+  }
+
+  run(){
+    super.run();
+    if (this.getElaspedTime() >= this.time()*1000) this.completed = true;
+  }
+
+}
+
+
+//----------------------Behaviors-----------------------
+class Behavior{
+  constructor(){
+    this.completed = false;
+    this.started = false;
+  }
+
+  onFirstExecution(){};
+
+  execute(){
+    if (this.started === false){
+      this.started = true;
+      this.onFirstExecution()
+    }
+
+    if (this.completed){
+      this.onExit();
+      const index = behaviors.indexOf(this);
+      if (index > -1) { // only splice array when item is found
+          behaviors.splice(index, 1); // Remove this
+      }
+    } 
+  }
+  
+  onExit(){};
+}
+
+class DriveBehavior extends Behavior{
+  constructor(direction){
+    super();
+    this.direction = direction;
+  }
+
+  execute(){
+    super.execute();
+    if (this.direction === DIRECTION.FORWARD){
+      car.accelerateTo(car.setSpeed)
+    } else {
+      car.accelerateTo(-car.setSpeed)
+    }
+  }
+
+}
+
 //----------------------Blockly-----------------------
 //----------------------Block Definitions------------------
   const operators_compare = {
@@ -1591,6 +2045,32 @@ javascript.javascriptGenerator.forBlock["operators_negate"] = function(block, ge
   return [`!(${value})`, javascript.Order.LOGICAL_NOT];
 };
 
+const loops_wait = {
+  init: function() {
+    this.appendValueInput('seconds')
+    .setCheck('Number')
+      .appendField('wait for');
+    this.appendDummyInput('end_text')
+      .appendField('seconds');
+    this.setInputsInline(true)
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setTooltip('The car waits for a certain amount of time');
+    this.setHelpUrl('');
+    this.setColour(120);
+  }
+};
+Blockly.common.defineBlocks({loops_wait: loops_wait});
+javascript.javascriptGenerator.forBlock['loops_wait'] = function(block, generator) {
+  // TODO: change Order.ATOMIC to the correct operator precedence strength
+  const value_seconds = generator.valueToCode(block, 'seconds', javascript.Order.ATOMIC);
+
+
+  // TODO: Assemble javascript into the code variable.
+  const code = `states.push(new WaitState(() => ${value_seconds}))\n`;
+  return code;
+}
+
 const logic_waitUntil = {
   init: function() {
     this.appendValueInput('CONDITION')
@@ -1658,7 +2138,6 @@ Blockly.common.defineBlocks({movement_drive: movement_drive});
 javascript.javascriptGenerator.forBlock['movement_drive'] = function(block, generator) {
   const dropdown_moveoption = block.getFieldValue('moveOption');
   const number_seconds = generator.valueToCode(block, 'seconds', Blockly.JavaScript.ORDER_ATOMIC);
-  console.log(number_seconds);
   let direction = null;
   if (dropdown_moveoption === 'Forward') {
     direction = DIRECTION.FORWARD;
@@ -1666,7 +2145,7 @@ javascript.javascriptGenerator.forBlock['movement_drive'] = function(block, gene
     direction = DIRECTION.BACKWARD;
   }
   // TODO: Assemble javascript into the code variable.
-  const code = `states.push(new DriveState(() => ${number_seconds*1000}, ${direction}))\n`;
+  const code = `states.push(new DriveState(() => ${number_seconds}, ${direction}))\n`;
   return code;
 }
 
@@ -1723,7 +2202,6 @@ javascript.javascriptGenerator.forBlock['movement_speed'] = function(block, gene
   // TODO: change Order.ATOMIC to the correct operator precedence strength
   const value_speed = generator.valueToCode(block, 'speed', javascript.Order.ATOMIC);
 
-  console.log(value_speed);
   // TODO: Assemble javascript into the code variable.
   const code = `states.push(new SetSpeedState(() => ${value_speed}))\n`;
   return code;
@@ -1747,9 +2225,14 @@ const movement_moveForward = {
 Blockly.common.defineBlocks({movement_moveForward: movement_moveForward});
 javascript.javascriptGenerator.forBlock['movement_moveForward'] = function(block, generator) {
   const dropdown_name = block.getFieldValue('direction');
-
+  let direction = null;
+  if (dropdown_name === "FWD") {
+    direction = DIRECTION.FORWARD;
+  } else {
+    direction = DIRECTION.BACKWARD;
+  }
   // TODO: Assemble javascript into the code variable.
-  const code = '...';
+  const code = `states.push(new AddDriveBehaviorState(${direction}))\n`;
   return code;
 }   
 
@@ -1767,8 +2250,7 @@ const movement_brake = {
 };
 Blockly.common.defineBlocks({movement_brake: movement_brake});
 javascript.javascriptGenerator.forBlock['movement_brake'] = function(block, generator) {
-  // TODO: Assemble javascript into the code variable.
-  const code = '...';
+  const code = 'states.push(new BrakeState())\n';
   return code;
 }
                     
@@ -1811,10 +2293,10 @@ const sensors_getSpeed = {
 };
 Blockly.common.defineBlocks({sensors_getSpeed: sensors_getSpeed});
 javascript.javascriptGenerator.forBlock['sensors_getSpeed'] = function(block, generator) {
-
   // TODO: Assemble javascript into the code variable.
-  const code = '...';
-  return code;
+  const code = 'car.getSpeed()';
+  console.log("Code: ", code);
+  return [code, javascript.Order.ATOMIC];
 }
 
 const sensors_getMaxSpeed = {
@@ -1832,8 +2314,8 @@ Blockly.common.defineBlocks({sensors_getMaxSpeed: sensors_getMaxSpeed});
 javascript.javascriptGenerator.forBlock['sensors_getMaxSpeed'] = function(block, generator) {
 
   // TODO: Assemble javascript into the code variable.
-  const code = '...';
-  return code;
+  const code = 'car.getSetSpeed()';
+  return [code, javascript.Order.ATOMIC];
 }
 
 
@@ -1939,6 +2421,17 @@ const toolbox = {
     name: "Loops",
     colour: COLORS.LOOPS,
     contents: [ {
+                  kind: "block", 
+                  type: "start_block"
+                },
+                {
+                  kind: "block",
+                  type: "loops_wait",
+                  inputs: {
+                    seconds: numberShadow(0)
+                  }
+                },
+                {
                     kind: "block",
                     type: "controls_repeat_ext",
                     inputs: {
@@ -1949,11 +2442,8 @@ const toolbox = {
                 {
                     kind: "block",
                     type: "controls_whileUntil"
-                },
-                {
-                  kind: "block", 
-                  type: "start_block"
-                }]
+                }
+                ]
 },
 {
     kind: "category",
@@ -2064,9 +2554,12 @@ function numberShadow(value = 0) {
     };
 }
 let scriptRunning = false;
+let canRunScript = true; //This is to make sure you clicked reset before running the script again
 function runScript() {
-  if (scriptRunning) return;
+  if (scriptRunning || !canRunScript) return;
   scriptRunning = true;
+  canRunScript = false;
+  
   currentStateIndex = 0;
   states = [];
   const topBlocks = workspace.getTopBlocks();
@@ -2080,16 +2573,26 @@ function runScript() {
   scriptLoop();
 }
 function scriptLoop() {
-  
+  if (paused){
+    requestAnimationFrame(scriptLoop);
+    return;
+  } 
+
   //running the state
-  if (currentStateIndex >= states.length || !scriptRunning){ 
+  if ((currentStateIndex >= states.length && behaviors.length === 0) || !scriptRunning){ 
     scriptRunning = false;
     console.log("Script finished");
     return;
   };
-  states[currentStateIndex].run();
-
- if (!paused) requestAnimationFrame(scriptLoop);
+  if (states.length > currentStateIndex) {
+    states[currentStateIndex].run();
+  } else {
+    console.log("No more states to run, waiting for behaviors to finish");
+  }
+  behaviors.forEach((behavior) => {
+    behavior.execute();
+  });
+ requestAnimationFrame(scriptLoop);
 }
 const panelContainer = document.getElementById("panelContainer");
 const pannelButton = document.getElementById("panelButton");
@@ -2108,7 +2611,7 @@ pannelButton.addEventListener("click", () => {
     panelActive = true;
   }
 });
-  let numBlocks = 0;
+  
 workspace.addChangeListener(() => {
     numBlocks = workspace.getAllBlocks().filter(block => !block.isShadow()).length;
     blockCounter.textContent = `Blocks: ${numBlocks}`;
