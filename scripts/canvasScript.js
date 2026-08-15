@@ -195,6 +195,7 @@ class Level{
     
     this.editStars([1,(numBlocks <= this.maxBlocks) ? 1 : 0, (timer/1000 <= this.maxSeconds) ? 1 : 0]); //TODO: Still Need to add Timer and Star Trigger
     if (maxLvl === this.lvlNum) maxLvl+=1;
+    console.log("MaxLvl", maxLvl)
     Level.updateLevelAvailability();
     WinScreen.stars.forEach((star, index) => {
       if (this.stars[index] === 1){
@@ -1014,8 +1015,9 @@ class WinAreaArrow extends FloatingObject{
 
    draw(x, y, heading = 0) {
     ctx.save(); 
-    ctx.translate(x, y ); //this.width / 2 is center of the picture
+    ctx.translate(x, y); //this.width / 2 is center of the picture
     ctx.rotate(toRadians(heading));
+    ctx.scale(1/camera.zoom, 1/camera.zoom)
     ctx.drawImage(this.image, (-this.width/2), (-this.height/2), this.width, this.height);
     ctx.restore();
   }
@@ -1040,7 +1042,7 @@ if (Math.abs(angleDeg) <= cornerAngle) {
     let x = halfWidth;
     let y = x * Math.tan(angle);
 
-    return new Point(x, y);
+    return new Point(x/camera.zoom, y/camera.zoom);
 
 } else if (Math.abs(angleDeg) >= 180 - cornerAngle) {
 
@@ -1048,7 +1050,7 @@ if (Math.abs(angleDeg) <= cornerAngle) {
     let x = -halfWidth;
     let y = x * Math.tan(angle);
 
-    return new Point(x, y);
+    return new Point(x/camera.zoom, y/camera.zoom);
 
 } else if (angleDeg > cornerAngle && angleDeg < 180 - cornerAngle) {
 
@@ -1056,7 +1058,7 @@ if (Math.abs(angleDeg) <= cornerAngle) {
     let y = halfHeight ;
     let x = y / Math.tan(angle);
 
-    return new Point(x, y);
+   return new Point(x/camera.zoom, y/camera.zoom);
 
 } else {
 
@@ -1064,7 +1066,7 @@ if (Math.abs(angleDeg) <= cornerAngle) {
     let y = -halfHeight;
     let x = y / Math.tan(angle);
 
-    return new Point(x, y);
+   return new Point(x/camera.zoom, y/camera.zoom);
 }
 }
 
@@ -1126,19 +1128,24 @@ class PlayerCar extends RigidBody {
     this.remainingRotation = 0;
   }
 
-  correctVelocity(){
-
-  }
-
   reset(){
     super.reset();
     this.setSpeed = 25;
   }
 
+ isTouching(){
+  for (let body of rigidBodies){
+    if (this.collide(body) && body.solid){
+      return true
+    }
+  }
+    return false
+ }
+
   onLevelStart(point, heading){
-    if (canvasObjects.indexOf(car) === -1) { //Weird issue where car spawns again everytime you select a level
-      canvasObjects.push(car);
-      rigidBodies.push(car);
+    if (canvasObjects.indexOf(this) === -1) { //Weird issue where car spawns again everytime you select a level
+      canvasObjects.push(this);
+      rigidBodies.push(this);
     }
     this.velocity = new Victor(0,0);
     this.moveTo(point.x, point.y);
@@ -1681,8 +1688,11 @@ class State{
     return this.elapsedTime;
   }
 
+  get index(){
+    return states.indexOf(this);
+  }
+
   onFirstExecution(){
-    this.index = states.indexOf(this);
    this.lastUpdate = performance.now();
   }
 
@@ -1710,9 +1720,6 @@ class DriveState extends State{
   constructor(time, direction){
     super();
     this.time = time;
-    console.log(this.time);
-    console.log(typeof this.time);
-    console.log(this.time());
     this.direction = direction;
   }
 
@@ -1735,7 +1742,6 @@ class DriveState extends State{
   onExit(){
     try {
       if (!(states[currentStateIndex+1] instanceof DriveState)) states.splice(this.index+1, 0, new BrakeState());
-      console.log(states);
     } catch {} 
     super.onExit();
   }
@@ -1837,6 +1843,109 @@ class WaitState extends State{
 
 }
 
+class WaitUntilState extends State{
+  constructor(condtion){
+    super();
+    this.condtion = condtion;
+  }
+  
+  run(){
+    super.run();
+    if (this.completed) return;
+    if (this.condtion()) this.completed = true;
+  }
+}
+
+class IfState extends State{
+  constructor(condition, ifStatement, elseIfArray, elseStatement){
+    super();
+    this.condition = condition;
+    this.ifStatement = ifStatement;
+    this.elseIfArray = elseIfArray;
+    this.elseStatement = elseStatement;
+    this.triggered = false;
+  }
+
+  onFirstExecution(){
+    super.onFirstExecution();
+    let otherStates = states.slice(this.index+1);
+    states.splice(this.index+1);
+    if (this.condition()){
+      this.triggered = true;
+      console.log(this.ifStatement)
+      eval(this.ifStatement);
+    } else {
+      if (this.elseIfArray.length != 0 && !this.triggered){
+        for (let i = 0; i < this.elseIfArray.length; i++){
+          if (this.triggered) break;
+          if (eval(this.elseIfArray[i][0])()){
+            this.triggered = true;
+            eval(JSON.parse(this.elseIfArray[i][1]));
+            console.log(states)
+          }
+        }
+      }
+
+      if (!this.triggered && this.elseStatement != null){
+        this.triggered=true;
+        eval(this.elseStatement);
+      }
+    }
+
+    states = states.concat(otherStates)
+    this.completed = true;
+  }
+
+
+}
+
+class RepeatState extends State{
+  constructor(amount, statement, numOfStatements){
+    this.amount = amount;
+    this.statement = statement;
+    this.numOfStatements = numOfStatements;
+    this.loops = 0;
+  }
+
+  run(){
+    if (this.loops >= Math.round(this.amount())) this.completed = true;
+    super.run()
+    if (this.completed) return;
+
+    let otherStates = states.slice(this.index)
+    states.splice(this.index);
+    eval(this.statement);
+    states = states.concat(otherStates);
+    this.loops++;
+    currentStateIndex = this.index - this.numOfStatements;
+  }
+
+}
+
+class RepeatUntilState extends State{
+constructor(condition, statement, numOfStatements, mode){
+  super();
+    if (mode === "WHILE"){
+      this.condition = () => !condition(); //Flip to make it return false if true
+    } else {
+      this.condition = condition
+    }
+    this.statement = statement;
+    this.numOfStatements = numOfStatements;
+  }
+
+  run(){
+    console.log(this.condition());
+    if (this.condition()) this.completed = true;
+    super.run()
+    if (this.completed) return;
+    let otherStates = states.slice(this.index)
+    states.splice(this.index);
+    eval(this.statement);
+    states = states.concat(otherStates);
+    currentStateIndex = this.index - this.numOfStatements;
+  }
+}
 
 //----------------------Behaviors-----------------------
 class Behavior{
@@ -1936,6 +2045,99 @@ javascript.javascriptGenerator.forBlock["operators_compare"] = function (block, 
     }[block.getFieldValue("OP")];
 
     return [`${left} ${op} ${right}`, javascript.Order.RELATIONAL];
+};
+
+javascript.javascriptGenerator.forBlock['controls_if'] = function(block, generator) {
+    // Get the condition
+    const condition = generator.valueToCode(
+        block,
+        'IF0',
+        javascript.Order.NONE
+    );
+
+    // Get the statements inside the IF
+    const ifBody = generator.statementToCode(
+        block,
+        'DO0'
+    );
+    let elseIfArray = [];
+    let i = 1;
+
+    while (block.getInput(`IF${i}`)) {
+    const elseCondition = generator.valueToCode(block, `IF${i}`, javascript.Order.NONE);
+    const body = generator.statementToCode(block, `DO${i}`);
+      elseIfArray.push([`() => ${elseCondition}`, JSON.stringify(body)]);
+    i++;
+    }
+    let elseBody = null;
+    try{
+      elseBody = generator.statementToCode(block, "ELSE");
+    } catch {}
+    console.log("Elif Array: ", JSON.stringify(elseIfArray));
+      
+    const code = `states.push(new IfState(()=> ${condition}, ${JSON.stringify(ifBody)}, ${JSON.stringify(elseIfArray)}, ${JSON.stringify(elseBody)}))\n`;
+
+    return code;
+};
+
+javascript.javascriptGenerator.forBlock['controls_repeat'] = function(block, generator) {
+    const amount = generator.valueToCode(
+        block,
+        'TIMES',
+        javascript.Order.NONE
+    );
+
+    const statement = generator.statementToCode(
+        block,
+        'DO'
+    );
+
+  const firstBlock = block.getInputTargetBlock('DO');
+
+    let numOfStatements = 0;
+    let currentBlock = firstBlock;
+
+    while (currentBlock) {
+    numOfStatements++;
+    currentBlock = currentBlock.getNextBlock();
+}   
+
+    return `states.push(new RepeatState(
+        () =>${amount},
+        ${JSON.stringify(statement)},
+        ${numOfStatements}
+    ))\n`;
+};
+
+javascript.javascriptGenerator.forBlock['controls_whileUntil'] = function(block, generator) {
+    const condition = generator.valueToCode(
+        block,
+        'BOOL',
+        javascript.Order.NONE
+    );
+
+    const mode = block.getFieldValue('MODE');
+
+    const statement = generator.statementToCode(
+        block,
+        'DO'
+    );
+
+    // Count only top-level statements
+    let numOfStatements = 0;
+    let currentBlock = block.getInputTargetBlock('DO');
+
+    while (currentBlock) {
+        numOfStatements++;
+        currentBlock = currentBlock.getNextBlock();
+    }
+
+    return `states.push(new RepeatUntilState(
+        () => ${condition},
+        ${JSON.stringify(statement)},
+        ${numOfStatements},
+        ${JSON.stringify(mode)}
+    ))\n`;
 };
 
   const operators_math  = {
@@ -2114,7 +2316,7 @@ javascript.javascriptGenerator.forBlock['logic_waitUntil'] = function(block, gen
   const value_condition = generator.valueToCode(block, 'CONDITION', javascript.Order.ATOMIC);
 
   // TODO: Assemble javascript into the code variable.
-  const code = '...';
+  const code = `states.push(new WaitUntilState(() => ${value_condition}))\n`;
   return code;
 }
 
@@ -2318,7 +2520,6 @@ Blockly.common.defineBlocks({sensors_getSpeed: sensors_getSpeed});
 javascript.javascriptGenerator.forBlock['sensors_getSpeed'] = function(block, generator) {
   // TODO: Assemble javascript into the code variable.
   const code = 'car.getSpeed()';
-  console.log("Code: ", code);
   return [code, javascript.Order.ATOMIC];
 }
 
@@ -2340,6 +2541,24 @@ javascript.javascriptGenerator.forBlock['sensors_getMaxSpeed'] = function(block,
   const code = 'car.getSetSpeed()';
   return [code, javascript.Order.ATOMIC];
 }
+
+const sensors_isTouching = {
+  init: function() {
+    this.appendDummyInput('text')
+      .appendField('is touching something?');
+    this.setTooltip('returns true if contacting a solid object');
+    this.setHelpUrl('');
+    this.setColour(COLORS.SENSORS);
+    this.setOutput(true, "Boolean")
+  }
+};
+Blockly.common.defineBlocks({sensors_isTouching: sensors_isTouching});
+javascript.javascriptGenerator.forBlock['sensors_isTouching'] = function() {
+
+  // TODO: Assemble javascript into the code variable.
+  const code = 'car.isTouching()';
+  return [code, javascript.Order.ATOMIC];
+}                    
 
 
 
@@ -2484,6 +2703,10 @@ const toolbox = {
       {
         kind: "block", 
         type: "sensors_getMaxSpeed"
+      },
+      {
+        kind: "block",
+        type: "sensors_isTouching"
       }
     ]
 }
@@ -2593,6 +2816,7 @@ function runScript() {
   const code = generator.blockToCode(startBlock);
   console.log(code);
   eval(code);
+  console.log(states);
   scriptLoop();
 }
 function scriptLoop() {
@@ -2645,9 +2869,14 @@ function save(){
   localStorage.setItem(`level${currentLvl}`, JSON.stringify(state));
   localStorage.setItem("maxLevel", maxLvl);
   localStorage.setItem("stars", JSON.stringify(Level.getAllStars()))
+  localStorage.setItem("currentLvl", currentLvl);
 }
 
 function load(){
+  if (performance.getEntriesByType("navigation")[0].type === "reload") {
+  currentLvl = localStorage.getItem("currentLvl")
+ }
+  Level.updateLevelAvailability();
   const state = JSON.parse(localStorage.getItem(`level${currentLvl}`));
   if (state === null) {
     console.log("New Save", state);
@@ -2657,8 +2886,11 @@ function load(){
   maxLvl = localStorage.getItem("maxLevel");
   Level.assignStars(JSON.parse(localStorage.getItem("stars")));
 
+ 
+
 }
-load()
+
+load();
 function clearSavedData(){
   maxLvl = 1
   for (let level of levels){
