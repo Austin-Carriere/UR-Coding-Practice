@@ -23,6 +23,16 @@ const panelOverlay = document.querySelector(".canvasOverlay");
 const levelContainer = document.querySelector(".levelsContainer");
 const blockCounter = document.querySelector(".blockCounter");
 const lockCamImg = document.querySelector("#lockView img");
+const settingButton = document.querySelector(".settingsButton");
+const settingsMenu = document.querySelector("#SettingsMenu");
+const resetButton = document.querySelector(".resetButton");
+const showArrowSetting = {
+  selector: document.querySelector(".ShowArrow .selector"),
+  options: document.querySelectorAll(".ShowArrow .option"),
+  selectorCover: document.querySelector(".ShowArrow .selectorCover")
+}
+let levelSeen = false;
+let settingsMenuActive = false;
 const COLORS = {
     MOVEMENT: "#FFC800",   // Bright yellow
     LOGIC: "#8B3DFF",      // Bright purple
@@ -186,6 +196,7 @@ class Level{
   }
 
   restart(){
+    levelSeen = false;
     WinScreen.stars.forEach((star, index) => {
       star.classList.remove("starActive");
     });
@@ -238,6 +249,7 @@ class Level{
   }
 
    activate(){
+    levelSeen = false;
     save();
     workspace.clear();
     currentLvl = this.lvlNum;
@@ -960,9 +972,22 @@ class Barrier extends RigidBody {
   constructor(x, y, heading = 0, hitboxWidth = 20, hitboxHeight = 20) {
     
     super(x, y, new Image(hitboxWidth, hitboxHeight), Infinity, 1, heading, 0, 0, hitboxWidth, hitboxHeight);
-    this.baseColor = "pink";
   }
   
+}
+
+class Obstacle extends Barrier{
+  constructor(x, y, heading = 0, hitboxWidth = 20, hitboxHeight = 20){
+    super(x, y, heading, hitboxWidth, hitboxHeight);
+  }
+
+  update(){
+    super.update();
+    if (this.collide(car)){
+      paused = true;
+      onFail("UR MOther")
+    }
+  }
 }
 
 class WinAreaMarker extends FloatingObject{
@@ -988,9 +1013,9 @@ class WinAreaMarker extends FloatingObject{
         top > canvas.height / 2;         // completely below
 
     if (outOfView) {
-        this.arrow.active = true;
-        
+        if (!(showArrowChoosenSetting === 1 && levelSeen)) this.arrow.active = true;   //Do this so auto show arrow setting works
     } else {
+      levelSeen = true;
       this.arrow.active = false;
     }
     this.arrow.update();
@@ -1008,7 +1033,7 @@ class WinAreaArrow extends FloatingObject{
   }
 
   update(){
-    if (this.active && showWinAreaArrow){
+    if (this.active && showWinAreaArrow && showArrowChoosenSetting != 2){
       this.draw(this.EdgeScreenCords.x, this.EdgeScreenCords.y, this.EdgeHeading)
     }
   }
@@ -1393,7 +1418,9 @@ let car = null;
 async function startGame() {
   await preloadImages();
     new Level(backgroundImage, "Test", backgroundImage, 10, 80, new Point(620, -200), 0)
-    .addObjects(new Array(...new WinArea(700, 400, 0, 200, 500, true).WinMarkerPackage,new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings));
+    .addObjects(new Array(...new WinArea(700, 600, 0, 200, 500, true).WinMarkerPackage,new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings,
+      new Obstacle(750, 100, 0, 300, 200)
+      ));
 
     new Level(backgroundImage, "Test2", backgroundImage, 10, 80, new Point(-320, 0) ,  0)
     .addObjects(new Array(new WinArea(700, 400, 0, 200, 100),new Billboard(320, 320), new Billboard(500, 320), new Billboard(320, 500)));
@@ -1455,48 +1482,52 @@ function resizeCanvas() {
 const carChangeMenu = document.getElementById("CarChange");
 const levelSelectorMenu = document.getElementById("levelSelector");
 const winScreen = document.getElementById("winScreen");
- 
+const failScreen = document.getElementById("failScreen");
+const failScreenMessage = failScreen.querySelector(".failMessage");
+const failRestartButton = failScreen.querySelector(".failRestartButton");
 function updateOverlay(){
   disableAllOverlays();
   if (overlayActive){
     panelOverlay.style.width = canvas.width + "px" ;
   } else {
-    panelOverlay.style.width = 0;
+    console.log("OVERLAYINACTIVE")
+    panelOverlay.style.width = "0";
   }
   if (overlayNum === 1){
     carChangeMenu.style.width = "";
     carChangeMenu.style.height = "";
-    levelSelectorMenu.style.width = "0";
-    levelSelectorMenu.style.height = "0";
-    winScreen.style.width = "0";
-    winScreen.style.height = "0";
   } else if(overlayNum === 2){
     levelSelectorMenu.style.width = "";
     levelSelectorMenu.style.height = "";
-    carChangeMenu.style.width = "0";
-    carChangeMenu.style.height = "0";
-    winScreen.style.width = "0";
-    winScreen.style.height = "0";
   } else if (overlayNum === 3){
     winScreen.style.width = "";
     winScreen.style.height = "";
-    levelSelectorMenu.style.width = "0";
-    levelSelectorMenu.style.height = "0";
-    carChangeMenu.style.width = "0";
-    carChangeMenu.style.height = "0";
+  } else if (overlayNum === 4){
+    failScreen.style.width = "";
+    failScreen.style.height = "";
   }
 
 
 }
 
 function disableAllOverlays(){
-  carChangeMenu.style.width = 0;
-  carChangeMenu.style.height = 0;
-  levelSelectorMenu.style.width = 0;
-  levelSelectorMenu.style.height = 0;
-  winScreen.style.width = 0;
-  winScreen.style.height = 0;
+  carChangeMenu.style.width = "0";
+  carChangeMenu.style.height = "0";
+  levelSelectorMenu.style.width = "0";
+  levelSelectorMenu.style.height = "0";
+  winScreen.style.width = "0";
+  winScreen.style.height = "0";
+  failScreen.style.width = "0";
+  failScreen.style.height = "0";
 }
+
+function onFail(message){
+  overlayNum = 4;
+  overlayActive = true;
+  failScreenMessage.textContent = message
+}
+
+failRestartButton.addEventListener("click", restartLevel)
 
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
@@ -1646,15 +1677,14 @@ for (let rigidBody of rigidBodies){
   canRunScript = true;
   levels[currentLvl-1].restart();
   playButtonImg.src = "/images/Play Icon.png";
+  overlayActive = false;
+  disableAllOverlays();
 }
 
 
 window.addEventListener("keydown", (event) => {
   if (event.key === "i") {
     debugMode = !debugMode;
-  }
-  if (event.key === "r"){
-    clearSavedData();
   }
   
 });
@@ -2900,4 +2930,56 @@ function clearSavedData(){
   Level.updateLevelAvailability();
   workspace.clear();
   localStorage.clear();
+}
+
+let resetVerified = false;
+
+settingButton.addEventListener("click", ()=>{
+  settingsMenuActive = !settingsMenuActive;
+
+  if (settingsMenuActive){
+    console.log(window.innerWidth);
+    settingsMenu.style.left = `${window.innerWidth - 395}px`
+    settingsMenu.style.height = "400px"
+    settingsMenu.style.width= "350px"
+    settingsMenu.style.border = "5px solid #2d436b"
+    settingsMenu.style.padding = "15px";
+  } else {
+    settingsMenu.style.border = "none"
+     settingsMenu.style.height = "0"
+    settingsMenu.style.width= "0"
+    settingsMenu.style.padding = "0";
+    resetVerified = false;
+    resetButton.textContent = "RESET"
+  }
+})
+
+resetButton.addEventListener("click", ()=>{
+  if (resetVerified){
+    resetButton.textContent = "RESET"
+    resetVerified = false;
+    clearSavedData();
+  } else {
+    resetButton.textContent = "Are you sure?"
+    resetVerified = true;
+  }
+})
+let showArrowChoosenSetting = 0; //0=yes, 1= auto, 2=no
+for (let option of showArrowSetting.options){
+  option.addEventListener("click", ()=>{
+    if (option.textContent === "Yes"){
+      showArrowChoosenSetting = 0;
+      showArrowSetting.selectorCover.style.width = `${option.getBoundingClientRect().width}px`;
+      showArrowSetting.selectorCover.style.left = "0px";
+    } else if (option.textContent === "Auto"){
+      console.log("TEST")
+      showArrowChoosenSetting = 1;
+      showArrowSetting.selectorCover.style.width = `${option.getBoundingClientRect().width}px`;
+      showArrowSetting.selectorCover.style.left = `${showArrowSetting.options[0].getBoundingClientRect().width}px`;
+    } else {
+      showArrowChoosenSetting = 2;
+      showArrowSetting.selectorCover.style.width = `${option.getBoundingClientRect().width}px`;
+      showArrowSetting.selectorCover.style.left = `${showArrowSetting.options[0].getBoundingClientRect().width + showArrowSetting.options[1].getBoundingClientRect().width}px`;
+    }
+  });
 }

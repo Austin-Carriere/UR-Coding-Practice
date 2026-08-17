@@ -25,9 +25,20 @@
         height="70px"
         src="images/urban-rescue-logo.png"
         alt="Urban Rescue Logo"
-        href="index.html"
+        href="index.html" class="urban-rescue-logo"
       /></a>
-      
+      <div class="settingsContainer">
+        <button class="settingsButton"><img height="100%" src="/images/Settings Icon.png"></button>
+      </div>
+      <div  id="SettingsMenu">
+        <div style="margin: 5px 0;" class="ShowArrow">Show Objective Arrow <div class="selector">
+          <button class="option">Yes</button>
+          <button class="option">Auto</button>
+          <button class="option">No</button>
+          <div class="selectorCover"></div>
+        </div> </div>
+        <div style="margin: 5px 0;" class="reset">Reset Save <button class="resetButton">RESET</button></div>
+      </div>
     </header>
     <div class="main">
     <div id="blocklyDiv" style="width:95vw;height:100%; margin-right: 5vw;"></div>
@@ -95,6 +106,11 @@
                   </div>
                   <button class="ReturnButton">Return</button>
                 </div>
+              </div>
+              <div id ="failScreen" class="menu">
+                <div class="failTitle">Uh Oh!</div>
+                <div class="failMessage">Fail Message</div>
+                <button class="failRestartButton"><img height="100%" src="/images/Restart Icon.png"></button>
               </div>
               </div>
             </div></div>

@@ -50,6 +50,109 @@ body{
   background-image: linear-gradient(to right, #282f44 15%, #494964);
   border-bottom: 3px #e6af2e solid;
 }
+
+.settingsContainer{
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+}
+
+#SettingsMenu{
+  position: absolute;
+  z-index: 10000;
+  top: 10vh;
+  height: 0;
+  width: 0;
+  overflow: hidden;
+  background-color: #273755;
+  border-radius: 25px;
+  display: flex;
+  justify-content: flex-start;
+  font-size: 25px;
+  font-family: "Concert One";
+  color: white;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.selector{
+  height: 30px;
+  background-color: #1b2639;
+  border: #e6af2e 4px solid;
+  border-radius: 15px;
+  width: fit-content;
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+.option{
+  font-size: 20px;
+  font-family: "Concert One";
+  background: none;
+  color: white;
+  border:none;
+  position: relative;
+  z-index: 1;
+} 
+
+
+.selectorCover{
+  background-color: #e6af2e;
+  position: absolute;
+  width: 40px;
+  height: 30px;
+  border-radius: 10px;
+  margin: 0px;
+  inset: 0;
+  transition: all 300ms ease-in;
+}
+
+.settingsButton{
+  height: 80%;
+  margin-right: 15px;
+  background: none;
+  border: none;
+  border-radius: 15px;
+  transition: all 600ms ease-in;
+}
+
+.reset{
+  color: rgb(239, 50, 50);
+}
+
+
+.resetButton{
+  background: none;
+  border: 3px solid rgb(255, 58, 58);
+  border-radius: 25px;
+  font-size: 23px;
+  color: white;
+  font-family: "Concert One";
+  background-color: rgb(255, 68, 68);
+  padding-bottom: 2px;
+}
+
+.resetButton:hover{
+  background-color: rgb(197, 52, 52);
+  transform: scale(1.05);
+}
+
+.settingsButton:hover{
+  transform: scale(1.1);
+  transform: rotate(360deg);
+}
+
+.settingsButton img{
+  transition: 600ms ease-in;
+}
+
+.settingsButton:hover img{
+    transform: scale(1.1);
+}
+
 .canvas {
   background: #181a2a;
   height: 90%;
@@ -67,7 +170,7 @@ body {
   margin: 0px;
   overflow: hidden
 }
-.header img:hover {
+.urban-rescue-logo:hover {
   transform: translate(0, -2px);
   transform: scale(1.2);
   background-image: radial-gradient(#f5d061 10%, #282f4400 68%);
@@ -135,7 +238,7 @@ body {
 
 .panelContainer {
   position: absolute;
-  z-index: 1000000000;
+  z-index: 1000;
   transform: translate(-71px, 5px);
   display: flex;
   width: 1000px;
@@ -661,5 +764,40 @@ border: #181a2a 5px solid;
 .ReturnButton:hover{
   transform: scale(1.02);
   background-image: linear-gradient(315deg, #552727, #803232);
+}
+
+.failTitle{
+  color: #ff0e0e;
+  font-family: "Jersey 10";
+  display: block;
+  font-size: 80px;
+  margin: 3px auto 10px;
+  text-decoration: underline #850101;
+  animation: titleAnim 1s ease-in-out infinite alternate;
+}
+
+.failMessage{
+  color: white;
+  font-size: 30px;
+  font-family: "Jersey 10";
+  margin: 25px auto;
+}
+
+.failRestartButton{
+  border: #000000 solid 5px;
+  background-color: #f81919;
+  height: 120px;
+  width: 250px;
+  border-radius: 40px;
+  transition: all 100ms linear;
+}
+
+.failRestartButton:hover{
+  background-color: #b91313;
+  transform: scale(1.04);
+}
+
+.failRestartButton:active{
+  transform: scale(0.96);
 }
 
