@@ -1373,8 +1373,9 @@ class Camera {
 const camera = new Camera(10000, 10000);
 let background = new Background(backgroundImage); 
 function loop(){
+  updateOverlay();
   if (overlayActive || !panelActive) {
-    updateOverlay();
+    
     save();
     lastUpdateForTimer = performance.now();
    requestAnimationFrame(loop); //To Pause if Overlay is on
@@ -1395,14 +1396,15 @@ function loop(){
     camera.update();
     CanvasObject.sortCanvasObjects();
     background.draw();
-  canvasObjects.forEach((object) => {
+    canvasObjects.forEach((object) => {
     object.update();
   });
-    const textSize = 40/camera.zoom
+    const textSize = 0.8 * 40/camera.zoom
     let timerInSec = timer/1000;
     ctx.font = `bold ${textSize}px Arial`;
     ctx.fillStyle = "white";
-    ctx.fillText(`${Math.floor(timerInSec/60) + ":" + (Math.floor(timerInSec % 60)).toString().padStart(2, '0')}`, -textSize, -canvas.height/(2.65 * camera.zoom) - textSize);
+    ctx.fillText(`${Math.floor(timerInSec/60) + ":" + (Math.floor(timerInSec % 60)).toString().padStart(2, '0')}`, -textSize, -canvas.height/(2.65 * camera.zoom) -textSize);
+    console.log(textSize * (800/canvas.height));
     if (debugMode){ 
       ctx.fillText(`${Math.round(1000/fpsTimer)} fps`, canvas.width/(3*camera.zoom), -canvas.height/(2.65 * camera.zoom) - textSize)
     }
@@ -1419,7 +1421,6 @@ async function startGame() {
   await preloadImages();
     new Level(backgroundImage, "Test", backgroundImage, 10, 80, new Point(620, -200), 0)
     .addObjects(new Array(...new WinArea(700, 600, 0, 200, 500, true).WinMarkerPackage,new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings,
-      new Obstacle(750, 100, 0, 300, 200)
       ));
 
     new Level(backgroundImage, "Test2", backgroundImage, 10, 80, new Point(-320, 0) ,  0)
@@ -2744,7 +2745,7 @@ const toolbox = {
     ]
 };
 
-    const urbanRescueTheme = Blockly.Theme.defineTheme("urbanRescue", {
+const urbanRescueTheme = Blockly.Theme.defineTheme("urbanRescue", {
     name: "urbanRescue",
 
     base: Blockly.Themes.Classic,
