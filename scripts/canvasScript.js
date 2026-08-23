@@ -66,6 +66,7 @@ let trafficLightImages = [];
 let thinBuildings = [];
 let images = {};
 let WinMarkerImg = [];
+let barrierImages = [];
 async function preloadImages() {
   let promises = [];
   for (let i = 1; i <= 7; i++) {
@@ -106,7 +107,7 @@ async function preloadImages() {
 
     promises = [];
 
-    for (let i = 1; i <= 7; i++){
+    for (let i = 1; i <= 15; i++){
       promises.push(
         loadImage(`/images/Enviorment Assets/Buildings/Thin Buildings/Building${i}.png`)
       );
@@ -117,6 +118,14 @@ async function preloadImages() {
     promises.push(loadImage("/images/WinAreaMarker.png"));
     promises.push(loadImage("/images/WinMarkerArrow.png"));
     WinMarkerImg = await Promise.all(promises);
+
+    promises = [];
+
+    for (let i = 1; i<=4; i++){
+      promises.push(loadImage(`/images/Enviorment Assets/Barriers/Barrier${i}.png`));
+    }
+
+    barrierImages = await Promise.all(promises);
 };
 
 
@@ -203,11 +212,13 @@ class Level{
   }
 
   finished(){
-    
-    this.editStars([1,(numBlocks <= this.maxBlocks) ? 1 : 0, (timer/1000 <= this.maxSeconds) ? 1 : 0]); //TODO: Still Need to add Timer and Star Trigger
-    if (maxLvl === this.lvlNum) maxLvl+=1;
+    console.log("Finished level ", this.lvlNum)
+    console.log(maxLvl === this.lvlNum, typeof maxLvl, this.lvlNum)
+     if (maxLvl === this.lvlNum) maxLvl+=1;
     console.log("MaxLvl", maxLvl)
     Level.updateLevelAvailability();
+    this.editStars([1,(numBlocks <= this.maxBlocks) ? 1 : 0, (timer/1000 <= this.maxSeconds) ? 1 : 0]); //TODO: Still Need to add Timer and Star Trigger
+   
     WinScreen.stars.forEach((star, index) => {
       if (this.stars[index] === 1){
         star.src = "/images/Star Full.png";
@@ -976,6 +987,50 @@ class Barrier extends RigidBody {
   
 }
 
+class VisibleBarrier extends RigidBody{
+  constructor(x, y, direction, length){
+    const otherLength = 50
+    let width = otherLength;
+    let height = otherLength;
+    
+    if (direction === DIRECTION.FORWARD || direction === DIRECTION.BACKWARD){
+      width = length;
+    } else {
+      height = length;
+    }
+
+    super(x, y, new Image(width, height), Infinity, 1, 0, 0, 0, width, height);
+    this.direction = direction;
+    this.imageTemplate = barrierImages[direction];
+  }
+
+  update(){
+    super.update()
+
+  }
+
+  draw(){
+    ctx.save();
+    ctx.translate(this.actualX + this.width / 2, this.actualY + this.height / 2 ); //this.width / 2 is center of the picture
+    if (this.direction === DIRECTION.FORWARD || this.direction === DIRECTION.BACKWARD){
+      console.log("TEST")
+      let numOfPictures = Math.floor(this.width/96);
+      for (let i = 0; i < numOfPictures; i++){
+       ctx.drawImage(this.imageTemplate,  (-this.width / 2 + 96*i), (-this.height / 2), 96, 48); //Make it draw multiple need to put 96 and 48 to make sure size right
+      }
+    } else {
+      if (this.direction === DIRECTION.LEFT) this.hitboxOffset = new Victor(15, 0);
+      console.log(this.actualX, this.hitboxX)
+      this.hitboxWidth = 75;
+       let numOfPictures = Math.floor(this.height/70);
+      for (let i = 0; i < numOfPictures; i++){
+       ctx.drawImage(this.imageTemplate,  (-this.width / 2 ), (-this.height / 2 + (70*i)), 96, 96); //Make it draw multiple need to put 96 and 48 to make sure size right
+      }
+    }
+    ctx.restore();
+  }
+}
+
 class Obstacle extends Barrier{
   constructor(x, y, heading = 0, hitboxWidth = 20, hitboxHeight = 20){
     super(x, y, heading, hitboxWidth, hitboxHeight);
@@ -1403,8 +1458,7 @@ function loop(){
     let timerInSec = timer/1000;
     ctx.font = `bold ${textSize}px Arial`;
     ctx.fillStyle = "white";
-    ctx.fillText(`${Math.floor(timerInSec/60) + ":" + (Math.floor(timerInSec % 60)).toString().padStart(2, '0')}`, -textSize, -canvas.height/(2.65 * camera.zoom) -textSize);
-    console.log(textSize * (800/canvas.height));
+    ctx.fillText(`${Math.floor(timerInSec/60) + ":" + (Math.floor(timerInSec % 60)).toString().padStart(2, '0')}`, -textSize, -canvas.height/(2.65 * camera.zoom) - textSize);
     if (debugMode){ 
       ctx.fillText(`${Math.round(1000/fpsTimer)} fps`, canvas.width/(3*camera.zoom), -canvas.height/(2.65 * camera.zoom) - textSize)
     }
@@ -1421,7 +1475,7 @@ async function startGame() {
   await preloadImages();
     new Level(backgroundImage, "Test", backgroundImage, 10, 80, new Point(620, -200), 0)
     .addObjects(new Array(...new WinArea(700, 600, 0, 200, 500, true).WinMarkerPackage,new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings,
-      ));
+      new VisibleBarrier(300, -300, DIRECTION.LEFT, 300)));
 
     new Level(backgroundImage, "Test2", backgroundImage, 10, 80, new Point(-320, 0) ,  0)
     .addObjects(new Array(new WinArea(700, 400, 0, 200, 100),new Billboard(320, 320), new Billboard(500, 320), new Billboard(320, 500)));
@@ -1491,7 +1545,6 @@ function updateOverlay(){
   if (overlayActive){
     panelOverlay.style.width = canvas.width + "px" ;
   } else {
-    console.log("OVERLAYINACTIVE")
     panelOverlay.style.width = "0";
   }
   if (overlayNum === 1){
@@ -2905,7 +2958,7 @@ function save(){
 
 function load(){
   if (performance.getEntriesByType("navigation")[0].type === "reload") {
-  currentLvl = localStorage.getItem("currentLvl")
+  currentLvl = JSON.parse(localStorage.getItem("currentLvl"))
  }
   Level.updateLevelAvailability();
   const state = JSON.parse(localStorage.getItem(`level${currentLvl}`));
@@ -2914,7 +2967,7 @@ function load(){
     return;
   }
      Blockly.serialization.workspaces.load(state, workspace);
-  maxLvl = localStorage.getItem("maxLevel");
+  maxLvl = JSON.parse(localStorage.getItem("maxLevel"));
   Level.assignStars(JSON.parse(localStorage.getItem("stars")));
 
  
