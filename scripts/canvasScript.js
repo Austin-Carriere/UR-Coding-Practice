@@ -67,6 +67,7 @@ let thinBuildings = [];
 let images = {};
 let WinMarkerImg = [];
 let barrierImages = [];
+let backgroundImages = [];  
 async function preloadImages() {
   let promises = [];
   for (let i = 1; i <= 7; i++) {
@@ -126,6 +127,13 @@ async function preloadImages() {
     }
 
     barrierImages = await Promise.all(promises);
+
+    promises = [];
+
+    for (let i = 1; i<=1; i++){
+      promises.push(loadImage(`/images/Enviorment Assets/Backgrounds/Background ${i}.png`));
+    }
+    backgroundImages = await Promise.all(promises);
 };
 
 
@@ -165,9 +173,10 @@ WinScreen.ReturnButton.addEventListener("click", ()=>{
 });
 
 class Level{
-  constructor(backgroundImage, title, preview, maxBlocks, maxSeconds ,carStartPoint, heading = 0, ){
+  constructor(backgroundImage, title, preview, maxBlocks, maxSeconds ,carStartPoint, heading = 0, backgroundScale = 0.8){
     levels.push(this);
     this.backgroundImage = backgroundImage;
+    this.backgroundScale = backgroundScale;
     this.title = title;
     this.lvlNum = levels.indexOf(this) + 1;
     this.objectList = [];
@@ -260,6 +269,8 @@ class Level{
   }
 
    activate(){
+    background = new Background(this.backgroundImage, this.backgroundScale);
+    camera.setBorder(this.backgroundImage.width * this.backgroundScale * 0.4, this.backgroundImage.height * this.backgroundScale * 0.4);
     levelSeen = false;
     save();
     workspace.clear();
@@ -962,7 +973,7 @@ class ThinBuildingArray {
   constructor(x, y, amount, space = 2){
     this.buildings = []
     for (let i = 0; i < amount; i++){
-     this.buildings.push(new ThinBuilding((x - 403*i - space*i), y)); 
+     this.buildings.push(new ThinBuilding((x - 365*i - space*i), y)); 
     }
   }
 
@@ -975,7 +986,7 @@ class ThinBuilding extends RigidBody{
   constructor(x, y){  
     let img = new Image();
     img = getRandomImg(thinBuildings);
-    super(x, img.height*0.9 + y, img, 10000, 0.9, 0, 8, img.height*0.715, img.width*.95, img.height*0.2);
+    super(x, img.height*0.9 + y, img, 10000, 0.8, 0, 8, img.height*0.635, img.width*.95, img.height*0.2);
   }
 }
 
@@ -1317,10 +1328,11 @@ class PlayerCar extends RigidBody {
 }
 
 class Background{
-  constructor(image){
+  constructor(image, scale){
     this.backgroundImage = image;
-    this.x = backgroundImage.width / 2 * BackgroundScaleFactor;
-    this.y = backgroundImage.height / 2 * BackgroundScaleFactor;
+    this.scale = scale;
+    this.x = backgroundImage.width / 2 * scale;
+    this.y = backgroundImage.height / 2 * scale;
     
   }
 
@@ -1333,9 +1345,9 @@ class Background{
   }
 
   draw(){
-    this.x = backgroundImage.width / 2 * BackgroundScaleFactor;
-    this.y = backgroundImage.height / 2 * BackgroundScaleFactor;
-    ctx.drawImage(backgroundImage, this.actualX, this.actualY,  backgroundImage.width*BackgroundScaleFactor, backgroundImage.height*BackgroundScaleFactor);
+    this.x = backgroundImage.width / 2 * this.scale;
+    this.y = backgroundImage.height / 2 * this.scale;
+    ctx.drawImage(backgroundImage, this.actualX, this.actualY,  backgroundImage.width*this.scale, backgroundImage.height*this.scale);
   }
 }
 
@@ -1356,6 +1368,7 @@ class Camera {
   }
 
   update(){
+    this.outOfBoundsCorrection();
     this.x += this.dx;
     this.dx = 0;
     this.y += this.dy;
@@ -1426,7 +1439,7 @@ class Camera {
 }
 
 const camera = new Camera(10000, 10000);
-let background = new Background(backgroundImage); 
+let background = null; 
 function loop(){
   updateOverlay();
   if (overlayActive || !panelActive) {
@@ -1473,11 +1486,11 @@ let car = null;
 
 async function startGame() {
   await preloadImages();
-    new Level(backgroundImage, "Test", backgroundImage, 10, 80, new Point(620, -200), 0)
-    .addObjects(new Array(...new WinArea(700, 600, 0, 200, 500, true).WinMarkerPackage,new Billboard(320, 320), new TrashCan(300, 40), new TrafficLight(532, 500, 1), ...new ThinBuildingArray(-315, 180, 5 , 10).buildings,
-      new VisibleBarrier(300, -300, DIRECTION.LEFT, 300)));
+    new Level(backgroundImages[0], "Test", backgroundImage, 10, 80, new Point(850, -700), 0)
+    .addObjects(new Array(...new WinArea(60, 1100, 0, 360, 200, false).WinMarkerPackage,new Billboard(300, 600), new TrashCan(300, 280), new TrashCan(350, 280), ...new ThinBuildingArray(1500, 120, 4, 0).getThinBuildings(),
+      new VisibleBarrier(1070, -900, DIRECTION.FORWARD, 400)));
 
-    new Level(backgroundImage, "Test2", backgroundImage, 10, 80, new Point(-320, 0) ,  0)
+    new Level(backgroundImages[0], "Test2", backgroundImage, 10, 80, new Point(-320, 0) ,  0)
     .addObjects(new Array(new WinArea(700, 400, 0, 200, 100),new Billboard(320, 320), new Billboard(500, 320), new Billboard(320, 500)));
     car = new PlayerCar(
     500,
