@@ -108,7 +108,7 @@ async function preloadImages() {
 
     promises = [];
 
-    for (let i = 1; i <= 15; i++){
+    for (let i = 1; i <= 13; i++){
       promises.push(
         loadImage(`/images/Enviorment Assets/Buildings/Thin Buildings/Building${i}.png`)
       );
@@ -270,7 +270,7 @@ class Level{
 
    activate(){
     background = new Background(this.backgroundImage, this.backgroundScale);
-    camera.setBorder(this.backgroundImage.width * this.backgroundScale * 0.4, this.backgroundImage.height * this.backgroundScale * 0.4);
+    camera.setBorder(this.backgroundImage.width * this.backgroundScale, this.backgroundImage.height * this.backgroundScale);
     levelSeen = false;
     save();
     workspace.clear();
@@ -360,8 +360,9 @@ class CanvasObject {
         }
 
         // Tie-breaker: bottomY
-        return b.bottomY - a.bottomY;
+        return a.bottomY - b.bottomY;
     });
+    
 }
 
   draw() {
@@ -973,7 +974,9 @@ class ThinBuildingArray {
   constructor(x, y, amount, space = 2){
     this.buildings = []
     for (let i = 0; i < amount; i++){
-     this.buildings.push(new ThinBuilding((x - 365*i - space*i), y)); 
+    let building = new ThinBuilding(0, 0);
+    building.moveTo(x - building.width*i - space*i, y+building.height);
+     this.buildings.push(building); 
     }
   }
 
@@ -1024,7 +1027,6 @@ class VisibleBarrier extends RigidBody{
     ctx.save();
     ctx.translate(this.actualX + this.width / 2, this.actualY + this.height / 2 ); //this.width / 2 is center of the picture
     if (this.direction === DIRECTION.FORWARD || this.direction === DIRECTION.BACKWARD){
-      console.log("TEST")
       let numOfPictures = Math.floor(this.width/96);
       for (let i = 0; i < numOfPictures; i++){
        ctx.drawImage(this.imageTemplate,  (-this.width / 2 + 96*i), (-this.height / 2), 96, 48); //Make it draw multiple need to put 96 and 48 to make sure size right
@@ -1388,13 +1390,17 @@ class Camera {
   }
 
   outOfBoundsCorrection(){
-    if (Math.abs(this.x) > this.borderX){
-      this.x = Math.min(this.borderX, Math.max(-this.borderX, this.x));
+    let canvasWidth = canvas.width/this.zoom/2;
+    let canvasHeight = canvas.height/this.zoom/2;
+
+    if (Math.abs(this.x) + canvasWidth > this.borderX/2){
+      this.x = Math.min(this.borderX/2 - canvasWidth, Math.max(-this.borderX/2 + canvasWidth, this.x));
     }
 
-    if (Math.abs(this.y) > this.borderY){
-      this.y = Math.min(this.borderY, Math.max(-this.borderY, this.y));
+    if (Math.abs(this.y) + canvasHeight > this.borderY/2){
+      this.y = Math.min(this.borderY/2 - canvasHeight, Math.max(-this.borderY/2 + canvasHeight, this.y));
     }
+  
   }
 
   setBorder(newBorderX, newBorderY){
@@ -1487,8 +1493,8 @@ let car = null;
 async function startGame() {
   await preloadImages();
     new Level(backgroundImages[0], "Test", backgroundImage, 10, 80, new Point(850, -700), 0)
-    .addObjects(new Array(...new WinArea(60, 1100, 0, 360, 200, false).WinMarkerPackage,new Billboard(300, 600), new TrashCan(300, 280), new TrashCan(350, 280), ...new ThinBuildingArray(1500, 120, 4, 0).getThinBuildings(),
-      new VisibleBarrier(1070, -900, DIRECTION.FORWARD, 400)));
+    .addObjects(new Array(...new WinArea(60, 1100, 0, 360, 200, false).WinMarkerPackage,new Billboard(300, 570), new TrashCan(300, 270), new TrashCan(350, 270), ...new ThinBuildingArray(1500, 200, 4, 0).getThinBuildings(), 
+    ...new ThinBuildingArray(690, -900, 6, 0).getThinBuildings(), new VisibleBarrier(1070, -900, DIRECTION.FORWARD, 400)));
 
     new Level(backgroundImages[0], "Test2", backgroundImage, 10, 80, new Point(-320, 0) ,  0)
     .addObjects(new Array(new WinArea(700, 400, 0, 200, 100),new Billboard(320, 320), new Billboard(500, 320), new Billboard(320, 500)));
