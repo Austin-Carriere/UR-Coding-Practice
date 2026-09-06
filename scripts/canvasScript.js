@@ -341,6 +341,8 @@ class CanvasObject {
     CanvasObject.sortCanvasObjects();
   }
 
+
+
   update() {
     this.draw();
   }
@@ -542,7 +544,11 @@ class RigidBody extends ConcreteObject {
     this.velocity = new Victor(0, 0);
   }
 
-  
+  changeStartPose(x, y, heading){
+    this.startX = x;
+    this.startY = y;
+    this.startHeading = heading;
+  }
 
   drawVector(){
     if (!debugMode) return;
@@ -975,7 +981,10 @@ class ThinBuildingArray {
     this.buildings = []
     for (let i = 0; i < amount; i++){
     let building = new ThinBuilding(0, 0);
-    building.moveTo(x - building.width*i - space*i, y+building.height);
+    let xPose = x - building.width*i - space*i;
+    let yPose = y+building.height;
+    building.moveTo(xPose, yPose);
+    building.changeStartPose(xPose, yPose, 0);
      this.buildings.push(building); 
     }
   }
