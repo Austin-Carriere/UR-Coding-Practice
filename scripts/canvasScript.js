@@ -348,7 +348,11 @@ class CanvasObject {
   }
 
   get bottomY(){
-    return this.actualY - this.height
+    let smallestY = Infinity
+    this.hitboxPoints.forEach((point) => {
+      if (point.y < smallestY) smallestY = point.y
+    })
+    return smallestY;
   }
 
   static sortCanvasObjects() {
@@ -1061,8 +1065,8 @@ class Obstacle extends Barrier{
   update(){
     super.update();
     if (this.collide(car)){
-      paused = true;
-      onFail("UR MOther")
+      onFail("You ran off the road!")
+       paused = true;
     }
   }
 }
@@ -1258,14 +1262,6 @@ class PlayerCar extends RigidBody {
     camera.setPos(this.x, this.y);
   }
 
-  get bottomY(){
-    let smallestY = Infinity
-    this.hitboxPoints.forEach((point) => {
-      if (point.y < smallestY) smallestY = point.y
-    })
-    return smallestY;
-  }
-
   update(){
     if (paused){
       this.draw();
@@ -1387,6 +1383,7 @@ class Camera {
     if (lockView) {
       this.x = car.x - car.width / 2;
       this.y = car.y - car.height / 2;
+      this.outOfBoundsCorrection();
       lockCamImg.src = "/images/Lock Cam Active Icon.png";
     } else {
       lockCamImg.src = "/images/Lock Cam Icon.png";
@@ -1399,6 +1396,7 @@ class Camera {
   }
 
   outOfBoundsCorrection(){
+    if (debugMode) return;
     let canvasWidth = canvas.width/this.zoom/2;
     let canvasHeight = canvas.height/this.zoom/2;
 
@@ -1501,9 +1499,12 @@ let car = null;
 
 async function startGame() {
   await preloadImages();
-    new Level(backgroundImages[0], "Test", backgroundImage, 10, 80, new Point(850, -700), 0)
+    new Level(backgroundImages[0], "Test", backgroundImage, 6, 10, new Point(850, -700), 0)
     .addObjects(new Array(...new WinArea(60, 1100, 0, 360, 200, false).WinMarkerPackage,new Billboard(300, 570), new TrashCan(300, 270), new TrashCan(350, 270), ...new ThinBuildingArray(1500, 200, 4, 0).getThinBuildings(), 
-    ...new ThinBuildingArray(690, -900, 6, 0).getThinBuildings(), new VisibleBarrier(1070, -900, DIRECTION.FORWARD, 400)));
+    ...new ThinBuildingArray(690, -900, 6, 0).getThinBuildings(), new VisibleBarrier(1070, -900, DIRECTION.FORWARD, 400), 
+    new Obstacle(1100, 250, 0, 20, 1200), new Obstacle(690, -130, 0, 20, 1000), new Barrier(-300, 1400, 0, 800, 1100), 
+    new Obstacle(-300, 300, 0, 20, 420), new Obstacle(690, -130, 0, 960, 20), new Obstacle(100, 1100, 0, 20, 900)
+  ));
 
     new Level(backgroundImages[0], "Test2", backgroundImage, 10, 80, new Point(-320, 0) ,  0)
     .addObjects(new Array(new WinArea(700, 400, 0, 200, 100),new Billboard(320, 320), new Billboard(500, 320), new Billboard(320, 500)));
@@ -1604,6 +1605,7 @@ function disableAllOverlays(){
 }
 
 function onFail(message){
+  if (paused) return;
   overlayNum = 4;
   overlayActive = true;
   failScreenMessage.textContent = message
@@ -2995,6 +2997,10 @@ function load(){
     return;
   }
      Blockly.serialization.workspaces.load(state, workspace);
+     if (workspace.getAllBlocks().length === 0){
+      const startBlock = workspace.newBlock("start_block");
+      startBlock.moveBy(100, 100); 
+     }
   maxLvl = JSON.parse(localStorage.getItem("maxLevel"));
   Level.assignStars(JSON.parse(localStorage.getItem("stars")));
 
