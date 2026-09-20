@@ -1,9 +1,16 @@
 const lvlArea = document.querySelector(".levelSelectionHome");
 const playButton = document.querySelector(".playButton");
 const title = document.querySelector(".titlePlayButton");
-let backgroundImage = new Image();
-backgroundImage.src = "/images/Enviorment Assets/Backgrounds/Background 1.png";
+let backgroundImages = [];
 let currentRow = null;
+let levels = [];
+
+
+for (let i = 1; i <= 1; i++){
+  let newImage = new Image();
+  newImage.src = `/images/Enviorment Assets/Backgrounds/Preview/${i}.png`;
+  backgroundImages[i-1] = newImage;
+}
 
 playButton.addEventListener("click", ()=>{
     title.classList.add("inactive");
@@ -33,16 +40,24 @@ class row{
 new row();
 
 class Level{
-  constructor(backgroundImage, title, description, preview){
+  constructor(title, description){
     levels.push(this);
-    this.backgroundImage = backgroundImage;
     this.title = title;
     this.description = description;
     this.lvlNum = levels.indexOf(this) + 1;
-    this.objectList = [];
-    this.preview = preview;
+    this.preview = backgroundImages[levels.indexOf(this)];
     this.stars = [0,0,0];
     this.element = this.createElement();
+    Level.assignStars(JSON.parse(localStorage.getItem("stars")));
+  }
+
+  static assignStars(stars){
+    let starArray = stars;
+    for(let level of levels){
+      level.editStars(new Array(starArray[0], starArray[1], starArray[2]))
+      starArray = starArray.slice(3);
+      level.updateStars();
+    }
   }
 
  
@@ -97,17 +112,5 @@ class Level{
 }
 
 
-new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
-new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
-new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
-new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
-new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
-new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
-new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
-new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
-new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
-new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
-new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
-new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
-new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
-new Level(backgroundImage, "Test", "This is a test Level", backgroundImage);
+new Level("Driving Test", "Drive around town to get your license");
+

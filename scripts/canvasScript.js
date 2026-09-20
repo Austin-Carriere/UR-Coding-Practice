@@ -10,6 +10,9 @@ const DIRECTION = {
 let levels = [];
 let maxLvl = 1;
 let currentLvl = 1;
+
+const numOfLevels = 1;
+
 let numBlocks = 0;
 let timer = 0;
 let fpsTimer = 0;
@@ -67,7 +70,8 @@ let thinBuildings = [];
 let images = {};
 let WinMarkerImg = [];
 let barrierImages = [];
-let backgroundImages = [];  
+let backgroundImages = []; 
+let previewImages = []; 
 async function preloadImages() {
   let promises = [];
   for (let i = 1; i <= 7; i++) {
@@ -108,7 +112,7 @@ async function preloadImages() {
 
     promises = [];
 
-    for (let i = 1; i <= 13; i++){
+    for (let i = 1; i <= 12; i++){
       promises.push(
         loadImage(`/images/Enviorment Assets/Buildings/Thin Buildings/Building${i}.png`)
       );
@@ -130,10 +134,18 @@ async function preloadImages() {
 
     promises = [];
 
-    for (let i = 1; i<=1; i++){
+    for (let i = 1; i<=numOfLevels; i++){
       promises.push(loadImage(`/images/Enviorment Assets/Backgrounds/Background ${i}.png`));
     }
     backgroundImages = await Promise.all(promises);
+
+    promises = [];
+
+    for (let i = 1; i<=numOfLevels; i++){
+      promises.push(loadImage(`/images/Enviorment Assets/Backgrounds/Preview/${i}.png`));
+    }
+
+    previewImages = await Promise.all(promises);
 };
 
 
@@ -173,16 +185,17 @@ WinScreen.ReturnButton.addEventListener("click", ()=>{
 });
 
 class Level{
-  constructor(backgroundImage, title, preview, maxBlocks, maxSeconds ,carStartPoint, heading = 0, backgroundScale = 0.8){
+  constructor(title, maxBlocks, maxSeconds, carStartPoint, heading = 0, backgroundScale = 0.8){
     levels.push(this);
-    this.backgroundImage = backgroundImage;
+    console.log(backgroundImages[levels.indexOf(this)]);
+    this.backgroundImage = backgroundImages[levels.indexOf(this)];
     this.backgroundScale = backgroundScale;
     this.title = title;
     this.lvlNum = levels.indexOf(this) + 1;
     this.objectList = [];
-    this.preview = preview;
+    this.preview = previewImages[levels.indexOf(this)];
     this.maxBlocks = maxBlocks;
-    this.stars = [0,0,0];
+    this.stars = JSON.parse(localStorage.getItem("stars"))?.slice((this.lvlNum - 1) * 3, this.lvlNum * 3) || [0, 0, 0];
     this.element = this.createElement();
     this.carStartPoint = carStartPoint;
     this.carStartHeading = heading;
@@ -205,6 +218,7 @@ class Level{
   }
 
   static assignStars(stars){
+    console.log("Assigning Stars: ", stars);
     let starArray = stars;
     for(let level of levels){
       level.editStars(new Array(starArray[0], starArray[1], starArray[2]))
@@ -1499,16 +1513,14 @@ let car = null;
 
 async function startGame() {
   await preloadImages();
-    new Level(backgroundImages[0], "Test", backgroundImage, 6, 10, new Point(850, -700), 0)
+    new Level("Driving Test", 6, 10, new Point(850, -700), 0)
     .addObjects(new Array(...new WinArea(60, 1100, 0, 360, 200, false).WinMarkerPackage,new Billboard(300, 570), new TrashCan(300, 270), new TrashCan(350, 270), ...new ThinBuildingArray(1500, 200, 4, 0).getThinBuildings(), 
     ...new ThinBuildingArray(690, -900, 6, 0).getThinBuildings(), new VisibleBarrier(1070, -900, DIRECTION.FORWARD, 400), 
     new Obstacle(1100, 250, 0, 20, 1200), new Obstacle(690, -130, 0, 20, 1000), new Barrier(-300, 1400, 0, 800, 1100), 
     new Obstacle(-300, 300, 0, 20, 420), new Obstacle(690, -130, 0, 960, 20), new Obstacle(100, 1100, 0, 20, 900)
   ));
 
-    new Level(backgroundImages[0], "Test2", backgroundImage, 10, 80, new Point(-320, 0) ,  0)
-    .addObjects(new Array(new WinArea(700, 400, 0, 200, 100),new Billboard(320, 320), new Billboard(500, 320), new Billboard(320, 500)));
-    car = new PlayerCar(
+  car = new PlayerCar(
     500,
     40,
     images[`/images/Cars/${colorArray[0][0]}_Car1.png`],
@@ -3002,6 +3014,7 @@ function load(){
       startBlock.moveBy(100, 100); 
      }
   maxLvl = JSON.parse(localStorage.getItem("maxLevel"));
+  console.log(JSON.parse(localStorage.getItem("stars")));
   Level.assignStars(JSON.parse(localStorage.getItem("stars")));
 
  
