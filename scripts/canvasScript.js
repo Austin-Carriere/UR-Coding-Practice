@@ -1531,7 +1531,12 @@ async function startGame() {
   load();
   loop();
   paused = true; //So it can draw the initial frame
+  await sleep(1000);
+  document.querySelector(".loadingScreen").classList.add("loadingScreenDeactivated");
 }
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 
 
 function toRadians(degrees){
