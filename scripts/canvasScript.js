@@ -3014,10 +3014,6 @@ function load(){
     return;
   }
      Blockly.serialization.workspaces.load(state, workspace);
-     if (workspace.getAllBlocks().length === 0){
-      const startBlock = workspace.newBlock("start_block");
-      startBlock.moveBy(100, 100); 
-     }
   maxLvl = JSON.parse(localStorage.getItem("maxLevel"));
   console.log(JSON.parse(localStorage.getItem("stars")));
   Level.assignStars(JSON.parse(localStorage.getItem("stars")));

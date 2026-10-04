@@ -17,11 +17,10 @@ body{
 .loadingScreenDeactivated {
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-100%);
 }
 
 .loadingScreen{
-  transition: transform 700ms cubic-bezier(0.63,-0.64, 0.88, 0.98), opacity 700ms ease-out;
+  transition: opacity 700ms ease-out;
   position: absolute;
   display: flex;
   justify-content: center;
