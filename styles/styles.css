@@ -602,6 +602,9 @@ border: #181a2a 5px solid;
   width: 80%;
   height: 100%;
   font-family: "Jersey 10";
+  display: flex;
+  justify-content: center;
+  align-items: center;
 } 
 .LevelModuleImgStarContainer{
   flex: 1;

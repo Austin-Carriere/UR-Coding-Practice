@@ -11,7 +11,7 @@ let levels = [];
 let maxLvl = 1;
 let currentLvl = 1;
 
-const numOfLevels = 1;
+const numOfLevels = 2;
 
 let numBlocks = 0;
 let timer = 0;
@@ -45,20 +45,22 @@ const COLORS = {
 };
 let lockView = false;
 let overlayNum = 1;
-let backgroundImage = new Image();
-backgroundImage.src = "/images/Enviorment Assets/Backgrounds/Background 1.png";
-//1. Get query string
+
 const queryString = window.location.search;
 
-// 2. Parse the parameters
+
 const urlParams = new URLSearchParams(queryString);
 
-// 3. Extract your specific variables by their keys
-currentLvl = urlParams.get('level'); 
-if (currentLvl === null) currentLvl = 1;
+
+if (performance.getEntriesByType("navigation")[0].type != "reload") {
+  currentLvl = urlParams.get('level');
+  if (currentLvl === null) currentLvl = 1;
+} else {
+  currentLvl = JSON.parse(localStorage.getItem("currentLvl")) ?? 1;
+}
+currentLvl = Number(currentLvl);
 
 let paused = false;
-const BackgroundScaleFactor = 0.242;
 
 let debugMode = false; //If true, will show hitboxes and other debug info
 
@@ -164,10 +166,9 @@ const WinScreen = {
 }
 
 WinScreen.NextLevelButton.addEventListener("click", ()=>{
-  currentLvl++;
-  levels[currentLvl-1].activate();
-  deactivateWinScreen();
+  levels[currentLvl].activate(); //this activates the next level b/c 0 indexing next level is = to currentLvl
   restartLevel();
+  deactivateWinScreen();
   paused = true;
   
 });
@@ -179,15 +180,14 @@ WinScreen.LevelSelectButton.addEventListener("click", ()=>{
 });
 
 WinScreen.ReturnButton.addEventListener("click", ()=>{
-  deactivateWinScreen();
   restartLevel();
+  deactivateWinScreen();
   paused = true;
 });
 
 class Level{
   constructor(title, maxBlocks, maxSeconds, carStartPoint, heading = 0, backgroundScale = 0.8){
     levels.push(this);
-    console.log(backgroundImages[levels.indexOf(this)]);
     this.backgroundImage = backgroundImages[levels.indexOf(this)];
     this.backgroundScale = backgroundScale;
     this.title = title;
@@ -195,11 +195,17 @@ class Level{
     this.objectList = [];
     this.preview = previewImages[levels.indexOf(this)];
     this.maxBlocks = maxBlocks;
-    this.stars = JSON.parse(localStorage.getItem("stars"))?.slice((this.lvlNum - 1) * 3, this.lvlNum * 3) || [0, 0, 0];
+    if (JSON.parse(localStorage.getItem("stars"))?.slice((this.lvlNum - 1) * 3, this.lvlNum * 3).length != 0){
+      this.stars = JSON.parse(localStorage.getItem("stars"))?.slice((this.lvlNum - 1) * 3, this.lvlNum * 3)
+    } else {
+      this.stars = [0, 0, 0];
+    }
+     
     this.element = this.createElement();
     this.carStartPoint = carStartPoint;
     this.carStartHeading = heading;
     this.maxSeconds = maxSeconds;
+    console.log("Construction:", this.stars);
   }
 
   editStars(array){
@@ -218,7 +224,6 @@ class Level{
   }
 
   static assignStars(stars){
-    console.log("Assigning Stars: ", stars);
     let starArray = stars;
     for(let level of levels){
       level.editStars(new Array(starArray[0], starArray[1], starArray[2]))
@@ -229,29 +234,33 @@ class Level{
 
   restart(){
     levelSeen = false;
-    WinScreen.stars.forEach((star, index) => {
+    WinScreen.stars.forEach((star) => {
       star.classList.remove("starActive");
     });
   }
 
   finished(){
+    states.forEach((state) => {state.completed = true});
     console.log("Finished level ", this.lvlNum)
     console.log(maxLvl === this.lvlNum, typeof maxLvl, this.lvlNum)
-     if (maxLvl === this.lvlNum) maxLvl+=1;
-    console.log("MaxLvl", maxLvl)
+     if (maxLvl === this.lvlNum) maxLvl += 1;
     Level.updateLevelAvailability();
-    this.editStars([1,(numBlocks <= this.maxBlocks) ? 1 : 0, (timer/1000 <= this.maxSeconds) ? 1 : 0]); //TODO: Still Need to add Timer and Star Trigger
-   
+    console.log(timer/1000, this.maxSeconds);
+    this.editStars([1,(numBlocks < this.maxBlocks) ? 1 : 0, (timer/1000 <= this.maxSeconds) ? 1 : 0]); //TODO: Still Need to add Timer and Star Trigger
+    console.log(this.lvlNum, this.stars);
     WinScreen.stars.forEach((star, index) => {
       if (this.stars[index] === 1){
         star.src = "/images/Star Full.png";
+      } else {
+        star.src = "/images/Star Empty.png";
       }
     
-   star.classList.add("starActive");
+    star.classList.add("starActive");
+
     })
     WinScreen.LevelNum.textContent = `Level ${this.lvlNum}`;
-    WinScreen.Star2Text.textContent = `> ${this.maxBlocks} Blocks`;
-    WinScreen.Star3Text.textContent = `> ${Math.floor(this.maxSeconds/60) + ":" + (this.maxSeconds % 60).toString().padStart(2, '0')}`;
+    WinScreen.Star2Text.textContent = `< ${this.maxBlocks} Blocks`;
+    WinScreen.Star3Text.textContent = `< ${Math.floor(this.maxSeconds/60) + ":" + (this.maxSeconds % 60).toString().padStart(2, '0')}`;
     
   }
 
@@ -283,12 +292,14 @@ class Level{
   }
 
    activate(){
+    console.log("Activating level ", this.lvlNum);
     background = new Background(this.backgroundImage, this.backgroundScale);
     camera.setBorder(this.backgroundImage.width * this.backgroundScale, this.backgroundImage.height * this.backgroundScale);
     levelSeen = false;
     save();
     workspace.clear();
     currentLvl = this.lvlNum;
+    localStorage.setItem("currentLevel", this.lvlNum);
     load();
     canvasObjects = [];
     rigidBodies = [];
@@ -309,6 +320,7 @@ class Level{
     const preview = module.querySelector(".LevelPreview img");
     const stars = module.querySelectorAll(".starContainer img");
     title.textContent = this.title;
+    title.style.fontSize = this.title.length > 15 ? `${28 - (this.title.length * 0.15)}px` : "36px";
     lvlNum.textContent = this.lvlNum;
     preview.setAttribute("src", this.preview.src);
     this.starsImage = stars;
@@ -731,14 +743,12 @@ rotateToward(heading, direction) {
     if (this.remainingRotation === 0) return;
 
     const maxSpeed = 2;
-    const minSpeed = 0.3;
+    const minSpeed = 0.5;
 
     // Slow down as we get close to the target
-    let speed = Math.abs(this.remainingRotation) / 30;
-    speed = Math.min(speed, maxSpeed);
-    speed = Math.max(speed, minSpeed);
-
-    const amount = speed;
+    let amount = Math.abs(this.remainingRotation) / 30;
+    amount = Math.min(amount, maxSpeed);
+    amount = Math.max(amount, minSpeed);
 
     if (this.remainingRotation > 0) {
         this.rotateBy(amount);
@@ -1060,7 +1070,6 @@ class VisibleBarrier extends RigidBody{
       }
     } else {
       if (this.direction === DIRECTION.LEFT) this.hitboxOffset = new Victor(15, 0);
-      console.log(this.actualX, this.hitboxX)
       this.hitboxWidth = 75;
        let numOfPictures = Math.floor(this.height/70);
       for (let i = 0; i < numOfPictures; i++){
@@ -1223,12 +1232,14 @@ constructor(x, y, heading = 0, width = 100, height = 100, needsInside = false){
     if (this.needsInside){
       if (car.inside(this)){
         activateWinScreen();
+        console.log("Finished level ", currentLvl);
         levels[currentLvl-1].finished();
       }
       return;
     }
   if (this.collide(car)){
     activateWinScreen();
+    console.log("Finished level ", currentLvl);
     levels[currentLvl-1].finished();
   }
   }
@@ -1352,8 +1363,8 @@ class Background{
   constructor(image, scale){
     this.backgroundImage = image;
     this.scale = scale;
-    this.x = backgroundImage.width / 2 * scale;
-    this.y = backgroundImage.height / 2 * scale;
+    this.x = this.backgroundImage.width / 2 * scale;
+    this.y = this.backgroundImage.height / 2 * scale;
     
   }
 
@@ -1366,9 +1377,9 @@ class Background{
   }
 
   draw(){
-    this.x = backgroundImage.width / 2 * this.scale;
-    this.y = backgroundImage.height / 2 * this.scale;
-    ctx.drawImage(backgroundImage, this.actualX, this.actualY,  backgroundImage.width*this.scale, backgroundImage.height*this.scale);
+    this.x = this.backgroundImage.width / 2 * this.scale;
+    this.y = this.backgroundImage.height / 2 * this.scale;
+    ctx.drawImage(this.backgroundImage, this.actualX, this.actualY,  this.backgroundImage.width*this.scale, this.backgroundImage.height*this.scale);
   }
 }
 
@@ -1389,11 +1400,13 @@ class Camera {
   }
 
   update(){
-    this.outOfBoundsCorrection();
-    this.x += this.dx;
+    let canvasWidth = canvas.width/this.zoom *2;
+    let canvasHeight = canvas.height/this.zoom *2;
+    if (Math.abs(this.dx + this.x) <= canvasWidth) this.x += this.dx;
     this.dx = 0;
-    this.y += this.dy;
+    if (Math.abs(this.dy + this.y) <= canvasHeight) this.y += this.dy;
     this.dy = 0;
+    this.outOfBoundsCorrection();
     if (lockView) {
       this.x = car.x - car.width / 2;
       this.y = car.y - car.height / 2;
@@ -1513,12 +1526,17 @@ let car = null;
 
 async function startGame() {
   await preloadImages();
-    new Level("Driving Test", 6, 10, new Point(850, -700), 0)
+    new Level("Driving Test", 7, 10, new Point(850, -700), 0)
     .addObjects(new Array(...new WinArea(60, 1100, 0, 360, 200, false).WinMarkerPackage,new Billboard(300, 570), new TrashCan(300, 270), new TrashCan(350, 270), ...new ThinBuildingArray(1500, 200, 4, 0).getThinBuildings(), 
     ...new ThinBuildingArray(690, -900, 6, 0).getThinBuildings(), new VisibleBarrier(1070, -900, DIRECTION.FORWARD, 400), 
     new Obstacle(1100, 250, 0, 20, 1200), new Obstacle(690, -130, 0, 20, 1000), new Barrier(-300, 1400, 0, 800, 1100), 
     new Obstacle(-300, 300, 0, 20, 420), new Obstacle(690, -130, 0, 960, 20), new Obstacle(100, 1100, 0, 20, 900)
   ));
+
+  new Level("Construction Chaos", 14, 20, new Point(-1200, -500), 0, 1.07).addObjects(new Array(...new WinArea(1400, 370, 0, 130, 250, false).WinMarkerPackage, 
+  ...new ThinBuildingArray(1420, -1300, 7, 2).getThinBuildings(), ...new ThinBuildingArray(945, -60, 3, 10).getThinBuildings(), new Billboard(20, 260), new TrashCan(320, -30), new VisibleBarrier(-1130, -670, DIRECTION.FORWARD, 300), new Obstacle(1600, -420, 0 , 2750, 250), 
+  new Barrier(-510, 475, 0, 635, 900)
+));
 
   car = new PlayerCar(
     500,
@@ -1771,6 +1789,9 @@ function restartLevel(){
 for (let rigidBody of rigidBodies){
     rigidBody.reset();
   }
+  if (scriptLoopID != null) cancelAnimationFrame(scriptLoopID);
+  scriptLoopID = null;
+  behaviors = [];
   paused = true;
   timer = 0;
   lastUpdateForTimer = performance.now();
@@ -1786,6 +1807,7 @@ for (let rigidBody of rigidBodies){
 window.addEventListener("keydown", (event) => {
   if (event.key === "i") {
     debugMode = !debugMode;
+    console.log("Debug mode:", debugMode);
   }
   
 });
@@ -1806,25 +1828,22 @@ class State{
     this.lastUpdate = 0;
   }
 
-  getElaspedTime(){
-        if (paused) {
-            // Don't accumulate time while paused.
-            this.lastUpdate = performance.now();
-            return;
-        }
-
-        const now = performance.now();
-        this.elapsedTime += now - this.lastUpdate;
-        this.lastUpdate = now;
-    return this.elapsedTime;
-  }
-
   get index(){
     return states.indexOf(this);
   }
 
   onFirstExecution(){
-   this.lastUpdate = performance.now();
+  }
+
+  updateElapsedTime(){
+    if (this.lastUpdate === 0) this.lastUpdate = performance.now();
+    const now = performance.now();
+    if (paused){
+      this.lastUpdate = now;
+      return;
+    }
+    this.elapsedTime += (now - this.lastUpdate);
+    this.lastUpdate = now;
   }
 
   run(){
@@ -1840,7 +1859,6 @@ class State{
   onExit(){
     this.active = false;
     currentStateIndex++;
-    console.log("State Index ", currentStateIndex);
     console.log("EXITING STATE");
   }
 
@@ -1854,14 +1872,9 @@ class DriveState extends State{
     this.direction = direction;
   }
 
-  onFirstExecution(){
-    super.onFirstExecution()
-    this.lastUpdate = performance.now();
-  }
-
   run(){ 
     super.run();
-    if (this.getElaspedTime() >= (this.time() *1000)) this.completed = true;
+    if (this.elapsedTime >= (this.time() * 1000)) this.completed = true;
     if (this.completed) return;
     if (this.direction === DIRECTION.FORWARD){
       car.accelerateTo(car.setSpeed)
@@ -1932,6 +1945,7 @@ class BrakeState extends State{
   }
 
   onFirstExecution(){
+    super.onFirstExecution();
     behaviors.forEach((behavior) => {
       if(behavior instanceof DriveBehavior) behavior.completed = true;
     });
@@ -1969,7 +1983,7 @@ class WaitState extends State{
 
   run(){
     super.run();
-    if (this.getElaspedTime() >= this.time()*1000) this.completed = true;
+    if (this.elapsedTime >= this.time()*1000) this.completed = true;
   }
 
 }
@@ -2003,7 +2017,6 @@ class IfState extends State{
     states.splice(this.index+1);
     if (this.condition()){
       this.triggered = true;
-      console.log(this.ifStatement)
       eval(this.ifStatement);
     } else {
       if (this.elseIfArray.length != 0 && !this.triggered){
@@ -2012,7 +2025,6 @@ class IfState extends State{
           if (eval(this.elseIfArray[i][0])()){
             this.triggered = true;
             eval(JSON.parse(this.elseIfArray[i][1]));
-            console.log(states)
           }
         }
       }
@@ -2032,6 +2044,7 @@ class IfState extends State{
 
 class RepeatState extends State{
   constructor(amount, statement, numOfStatements){
+    super();
     this.amount = amount;
     this.statement = statement;
     this.numOfStatements = numOfStatements;
@@ -2066,7 +2079,6 @@ constructor(condition, statement, numOfStatements, mode){
   }
 
   run(){
-    console.log(this.condition());
     if (this.condition()) this.completed = true;
     super.run()
     if (this.completed) return;
@@ -2204,7 +2216,6 @@ javascript.javascriptGenerator.forBlock['controls_if'] = function(block, generat
     try{
       elseBody = generator.statementToCode(block, "ELSE");
     } catch {}
-    console.log("Elif Array: ", JSON.stringify(elseIfArray));
       
     const code = `states.push(new IfState(()=> ${condition}, ${JSON.stringify(ifBody)}, ${JSON.stringify(elseIfArray)}, ${JSON.stringify(elseBody)}))\n`;
 
@@ -2932,6 +2943,7 @@ function numberShadow(value = 0) {
 }
 let scriptRunning = false;
 let canRunScript = true; //This is to make sure you clicked reset before running the script again
+let scriptLoopID = null;
 function runScript() {
   if (scriptRunning || !canRunScript) return;
   scriptRunning = true;
@@ -2948,11 +2960,13 @@ function runScript() {
   console.log(code);
   eval(code);
   console.log(states);
-  scriptLoop();
+   if (scriptLoopID != null) cancelAnimationFrame(scriptLoopID);
+    scriptLoopID = requestAnimationFrame(scriptLoop);
 }
 function scriptLoop() {
+  if (states.length > currentStateIndex) states[currentStateIndex].updateElapsedTime();
   if (paused){
-    requestAnimationFrame(scriptLoop);
+    scriptLoopID = requestAnimationFrame(scriptLoop);
     return;
   } 
 
@@ -2970,7 +2984,7 @@ function scriptLoop() {
   behaviors.forEach((behavior) => {
     behavior.execute();
   });
- requestAnimationFrame(scriptLoop);
+  scriptLoopID = requestAnimationFrame(scriptLoop);
 }
 const panelContainer = document.getElementById("panelContainer");
 const pannelButton = document.getElementById("panelButton");
@@ -3004,18 +3018,15 @@ function save(){
 }
 
 function load(){
-  if (performance.getEntriesByType("navigation")[0].type === "reload") {
-  currentLvl = JSON.parse(localStorage.getItem("currentLvl"))
- }
   Level.updateLevelAvailability();
   const state = JSON.parse(localStorage.getItem(`level${currentLvl}`));
   if (state === null) {
     console.log("New Save", state);
     return;
   }
+  workspace.clear();
      Blockly.serialization.workspaces.load(state, workspace);
   maxLvl = JSON.parse(localStorage.getItem("maxLevel"));
-  console.log(JSON.parse(localStorage.getItem("stars")));
   Level.assignStars(JSON.parse(localStorage.getItem("stars")));
 
  
@@ -3024,7 +3035,7 @@ function load(){
 
 load();
 function clearSavedData(){
-  maxLvl = 1
+  maxLvl = 5
   for (let level of levels){
     level.editStars(new Array(0,0,0));
     level.updateStars
@@ -3040,7 +3051,6 @@ settingButton.addEventListener("click", ()=>{
   settingsMenuActive = !settingsMenuActive;
 
   if (settingsMenuActive){
-    console.log(window.innerWidth);
     settingsMenu.style.left = `${window.innerWidth - 395}px`
     settingsMenu.style.height = "400px"
     settingsMenu.style.width= "350px"
@@ -3074,7 +3084,6 @@ for (let option of showArrowSetting.options){
       showArrowSetting.selectorCover.style.width = `${option.getBoundingClientRect().width}px`;
       showArrowSetting.selectorCover.style.left = "0px";
     } else if (option.textContent === "Auto"){
-      console.log("TEST")
       showArrowChoosenSetting = 1;
       showArrowSetting.selectorCover.style.width = `${option.getBoundingClientRect().width}px`;
       showArrowSetting.selectorCover.style.left = `${showArrowSetting.options[0].getBoundingClientRect().width}px`;
