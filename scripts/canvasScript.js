@@ -224,6 +224,7 @@ class Level{
   }
 
   static assignStars(stars){
+    if (stars === null) stars = Array(levels.length * 3).fill(0);
     let starArray = stars;
     for(let level of levels){
       level.editStars(new Array(starArray[0], starArray[1], starArray[2]))
@@ -375,6 +376,7 @@ class CanvasObject {
 
   get bottomY(){
     let smallestY = Infinity
+    if (this.hitboxPoints === undefined) return Infinity;
     this.hitboxPoints.forEach((point) => {
       if (point.y < smallestY) smallestY = point.y
     })
@@ -643,10 +645,13 @@ class RigidBody extends ConcreteObject {
           continue;
         }
         //Collision
-          if(this.collide(rigidBody)){
+        if(this.collide(rigidBody)){
+
          rigidBody.fillColor = "lime";
+
          let collision = this.getMTV(rigidBody);
         if (collision === null) return;
+
         rigidBody.onCollision(this);
         this.moveByVector(collision.mtv);
         
@@ -656,8 +661,8 @@ class RigidBody extends ConcreteObject {
         .clone()
         .multiplyScalar(speed);
 
-        this.contactRotation(collision);
-
+        let contactPoint = this.getContactPoint(rigidBody);
+        this.contactRotation(collision, contactPoint);
       
          } else {
           if (rigidBody === this) return;
@@ -743,13 +748,12 @@ rotateToward(heading, direction) {
     if (this.remainingRotation === 0) return;
 
     const maxSpeed = 2;
-    const minSpeed = 0.5;
+    const minSpeed = 0.4;
 
     // Slow down as we get close to the target
     let amount = Math.abs(this.remainingRotation) / 30;
     amount = Math.min(amount, maxSpeed);
     amount = Math.max(amount, minSpeed);
-
     if (this.remainingRotation > 0) {
         this.rotateBy(amount);
         this.remainingRotation -= amount;
@@ -903,14 +907,78 @@ return {
 
 }
 
-  contactRotation(collision){
-    let angleDifference = RigidBody.angleDifference(this.heading, Math.abs(collision.tangent.angleDeg()));
-    if (Math.abs(angleDifference) < 90) {
-        this.rotateBy(-angleDifference * 0.1 * (this.speed * 0.4));
-    } else {
-     this.rotateBy(-angleDifference * 0.04 * (this.speed * 0.4)); 
+
+
+containsPoint(point) {
+    const vertexList = this.hitboxPoints;
+
+    let sawPositiveSide = false;
+    let sawNegativeSide = false;
+
+    for (let vertexIndex = 0; vertexIndex < vertexList.length; vertexIndex++) {
+        const edgeStart = vertexList[vertexIndex];
+        const edgeEnd = vertexList[(vertexIndex + 1) % vertexList.length];
+
+        const edgeVectorX = edgeEnd.x - edgeStart.x;
+        const edgeVectorY = edgeEnd.y - edgeStart.y;
+        const toPointX = point.x - edgeStart.x;
+        const toPointY = point.y - edgeStart.y;
+
+        const crossProduct = edgeVectorX * toPointY - edgeVectorY * toPointX;
+
+        if (crossProduct > 0) sawPositiveSide = true;
+        if (crossProduct < 0) sawNegativeSide = true;
+
+        // point is on opposite sides of two edges, so it must be outside
+        if (sawPositiveSide && sawNegativeSide) return false;
     }
-  }
+
+    return true;
+}
+
+getContactPoint( bodyB) {
+    const penetratingVertices = [];
+
+    for (const vertex of bodyB.hitboxPoints) {
+        if (this.containsPoint(vertex)) penetratingVertices.push(vertex);
+    }
+    for (const vertex of this.hitboxPoints) {
+        if (bodyB.containsPoint(vertex)) penetratingVertices.push(vertex);
+    }
+
+    // fallback if no vertex is inside (e.g. edge crossing edge)
+    if (penetratingVertices.length === 0) {
+        return new Victor(
+            (this.center.x + bodyB.center.x) / 2,
+            (this.center.y + bodyB.center.y) / 2
+        );
+    }
+
+    const contactPoint = new Victor(0, 0);
+    for (const vertex of penetratingVertices) {
+        contactPoint.x += vertex.x;
+        contactPoint.y += vertex.y;
+    }
+    contactPoint.x /= penetratingVertices.length;
+    contactPoint.y /= penetratingVertices.length;
+    return contactPoint;
+}
+
+  contactRotation(collision, contactPoint) {
+    const rotationStrength = 0.1; // degrees per unit, tune this
+    const penetrationDepth = collision.mtv.length();
+
+    const leverArm = new Victor(
+        contactPoint.x - this.center.x,
+        contactPoint.y - this.center.y
+    );
+
+    // signed perpendicular distance from the center to the normal line
+    const signedDistance = leverArm.x * collision.normal.y - leverArm.y * collision.normal.x;
+
+    // this body is pushed along -normal, so the torque sign is flipped
+    this.rotateBy(-signedDistance * penetrationDepth * rotationStrength);
+}
 }
 let rigidBodies = [RigidBody];
 
@@ -1204,6 +1272,80 @@ get EdgeHeading(){
    return vector.angleDeg();
 }
 }
+
+class PlacementMarker extends FloatingObject{
+  constructor(){
+    super(0, 0, new Image(50, 50), 1, 0)
+  }
+
+  update(){
+    super.update();
+    this.x = camera.x + (-canvasMouseX + canvas.width/2) / camera.zoom;
+    this.y = camera.y + (-canvasMouseY + canvas.height/2) / camera.zoom;
+    console.log(`X: ${this.x}, Y: ${this.y}`);
+
+    for (let pin of pins){
+      this.drawBoxFromPin(pin);
+    }
+  }
+
+  drawBoxFromPin(pin){
+    ctx.strokeStyle = pin.color;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(pin.actualX, pin.actualY, this.actualX - pin.actualX, this.actualY - pin.actualY);
+    ctx.fillStyle = pin.color;
+    ctx.font = "20px Concert One";
+    ctx.fillText(`${-Math.round(this.actualX - pin.actualX)}`,  (this.actualX - pin.actualX) / 2 + pin.actualX, pin.actualY + 20);
+    ctx.fillText(`${-Math.round(this.actualY - pin.actualY)}`, pin.actualX + 20, (this.actualY - pin.actualY) / 2 + pin.actualY);
+  }
+
+  draw(){
+    if (!debugMode) return;
+    ctx.font = "20px Concert One"
+    ctx.fillStyle = "rgb(255, 255, 255)";
+    ctx.fillText(`X: ${Math.round(this.x)}, Y: ${Math.round(this.y)}`, this.actualX, this.actualY);
+  }
+
+  getCoordsString(){
+    if (pins.length === 1){
+      const pin = pins[0];
+      return `${Math.round(this.x)}, ${Math.round(this.y)}, 0, ${-Math.round(this.actualX - pin.actualX)}, ${-Math.round(this.actualY - pin.actualY)}`;
+    }
+    return `${Math.round(this.x)}, ${Math.round(this.y)}`;
+  }
+
+  placePin(){
+    canvasObjects.push(new Pin(this.x, this.y));
+  }
+}
+
+let pins = [];
+class Pin extends FloatingObject{
+  constructor(x, y){
+    super(x,y, new Image(0,0), 1, 0);
+    pins.push(this);
+    this.color = `rgb(${Math.ceil(Math.random() * 170 + 84)}, ${Math.ceil(Math.random() * 170 + 84)}, ${Math.ceil(Math.random() * 170 + 84)})`;
+  }
+
+  draw(){
+    super.draw();
+    if (!debugMode) return;
+     ctx.font = "20px Concert One"
+    ctx.fillStyle = this.color;
+    ctx.fillText(`X: ${Math.round(this.x)}, Y: ${Math.round(this.y)}`, this.actualX, this.actualY);
+  }
+
+  static removeAllPins(){
+    for (let pin of pins) {
+      let index = canvasObjects.indexOf(pin);
+      if (index !== -1) {
+        canvasObjects.splice(index, 1);
+      }
+    }
+    pins = [];
+  }
+}
+
 class WinArea extends RigidBody{
 constructor(x, y, heading = 0, width = 100, height = 100, needsInside = false){
   super(x, y, new Image(width, height), Infinity, 1, heading, 0, 0, width, height);
@@ -1386,6 +1528,8 @@ class Background{
 let drag = false;
 let mouseX = 0;
 let mouseY = 0;
+let canvasMouseX = 0;
+let canvasMouseY = 0;
 
 class Camera {
   constructor(borderX, borderY, x= 0, y= 0){
@@ -1450,6 +1594,8 @@ class Camera {
     })
 
     canvas.addEventListener("mousemove", (event) => {
+      canvasMouseX = event.offsetX;
+      canvasMouseY = event.offsetY;
      // console.log("Mouse: ", -(event.offsetX - canvas.width/2 - this.x), -(event.offsetY - canvas.height/2 - this.y));
       if (!drag) return;
       lockView = false;
@@ -1458,7 +1604,6 @@ class Camera {
       this.outOfBoundsCorrection();
         mouseX = event.offsetX; //Reset the last position
         mouseY = event.offsetY;
-    
     })
 
     canvas.addEventListener("mousedown", (event)=>{
@@ -1535,7 +1680,7 @@ async function startGame() {
 
   new Level("Construction Chaos", 14, 20, new Point(-1200, -500), 0, 1.07).addObjects(new Array(...new WinArea(1400, 370, 0, 130, 250, false).WinMarkerPackage, 
   ...new ThinBuildingArray(1420, -1300, 7, 2).getThinBuildings(), ...new ThinBuildingArray(945, -60, 3, 10).getThinBuildings(), new Billboard(20, 260), new TrashCan(320, -30), new VisibleBarrier(-1130, -670, DIRECTION.FORWARD, 300), new Obstacle(1600, -420, 0 , 2750, 250), 
-  new Barrier(-510, 475, 0, 635, 900)
+  new Barrier(-510, 475, 0, 635, 900), new Obstacle(-20, 713, 0, 200, 700), new Obstacle(1006, 378, 0, 150, 430), new Obstacle(1406, 98, 0, 75, 750), new Obstacle(1405, 471, 0, 500, 80)
 ));
 
   car = new PlayerCar(
@@ -1563,6 +1708,10 @@ function toRadians(degrees){
 
 function toDegrees(radians){
   return radians * (180/Math.PI);
+}
+
+function contains(list, className){
+  return list.findIndex(obj => obj instanceof className) !== -1;
 }
 
 function getRandomInt(max) {
@@ -1808,8 +1957,22 @@ window.addEventListener("keydown", (event) => {
   if (event.key === "i") {
     debugMode = !debugMode;
     console.log("Debug mode:", debugMode);
+    if (canvasObjects.findIndex(obj => obj instanceof PlacementMarker) === -1){
+      canvasObjects.push(new PlacementMarker());
+    }
   }
-  
+
+  if (event.key === "f" && contains(canvasObjects, PlacementMarker)){
+    canvasObjects.find(obj => obj instanceof PlacementMarker).placePin();
+  }
+
+  if (event.key ==="r" && debugMode) Pin.removeAllPins()
+});
+
+ window.addEventListener("keypress", async (event) => {
+  if (event.key === "c" && debugMode && contains(canvasObjects, PlacementMarker)) {
+    await navigator.clipboard.writeText(canvasObjects.find(obj => obj instanceof PlacementMarker).getCoordsString());
+  }
 });
 
 
@@ -1896,6 +2059,7 @@ class RotateState extends State{
     super();
     this.heading = null;
     this.direction = direction;
+    this.ticks = 0;
     this.getHeading = () => heading();
   }
 
@@ -1916,9 +2080,22 @@ class RotateState extends State{
     if (this.completed) return;
     car.rotateToward(this.heading ,this.direction)
     if (this.direction === DIRECTION.LEFT) {
+      console.log("Heading Diff:", Math.abs((car.heading - (this.startHeading - this.heading))));
         if (Math.abs((car.heading - (this.startHeading - this.heading))) < 0.2) this.completed = true;
     } else {
+      console.log("Heading Diff:", Math.abs((car.heading - (this.startHeading + this.heading))));
         if (Math.abs((car.heading - (this.startHeading + this.heading))) < 0.2) this.completed = true;
+    }
+    this.ticks++;
+  }
+
+  onExit(){
+    super.onExit();
+    if (this.direction === DIRECTION.LEFT) {
+      car.rotateTo(this.startHeading - this.heading);
+    }
+    else {
+      car.rotateTo(this.startHeading + this.heading);
     }
   }
 
