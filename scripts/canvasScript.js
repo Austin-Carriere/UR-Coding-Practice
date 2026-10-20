@@ -11,7 +11,7 @@ let levels = [];
 let maxLvl = 1;
 let currentLvl = 1;
 
-const numOfLevels = 2;
+const numOfLevels = 3;
 
 let numBlocks = 0;
 let timer = 0;
@@ -74,6 +74,7 @@ let WinMarkerImg = [];
 let barrierImages = [];
 let backgroundImages = []; 
 let previewImages = []; 
+let coneImages = [];
 async function preloadImages() {
   let promises = [];
   for (let i = 1; i <= 7; i++) {
@@ -148,6 +149,14 @@ async function preloadImages() {
     }
 
     previewImages = await Promise.all(promises);
+
+    promises = [];
+
+    for(let i = 1; i <= 8; i++){
+      promises.push(loadImage(`/images/Enviorment Assets/Cones/Cone ${i}.png`))
+    }
+
+    coneImages = await Promise.all(promises);
 };
 
 
@@ -994,6 +1003,18 @@ class Billboard extends RigidBody {
   }
 }
 
+class TrafficCone extends RigidBody {
+  constructor(x, y, forceCostume = null) {
+    let img = null;
+    if (forceCostume !== null && coneImages[forceCostume]) {
+    img = coneImages[forceCostume];
+  } else {
+    img = getRandomImg(coneImages);
+  }
+  super(x, y, img, 10, 1, 0);
+  }
+}
+
 class TrashCan extends RigidBody {
   constructor(x, y, forceCostume = null){
     let img = null;
@@ -1149,14 +1170,15 @@ class VisibleBarrier extends RigidBody{
 }
 
 class Obstacle extends Barrier{
-  constructor(x, y, heading = 0, hitboxWidth = 20, hitboxHeight = 20){
+  constructor(x, y, heading = 0, hitboxWidth = 20, hitboxHeight = 20, message = "You ran off the road!"){
     super(x, y, heading, hitboxWidth, hitboxHeight);
+    this.message = message;
   }
 
   update(){
     super.update();
     if (this.collide(car)){
-      onFail("You ran off the road!")
+      onFail(this.message)
        paused = true;
     }
   }
@@ -1678,9 +1700,21 @@ async function startGame() {
     new Obstacle(-300, 300, 0, 20, 420), new Obstacle(690, -130, 0, 960, 20), new Obstacle(100, 1100, 0, 20, 900)
   ));
 
-  new Level("Construction Chaos", 14, 20, new Point(-1200, -500), 0, 1.07).addObjects(new Array(...new WinArea(1400, 370, 0, 130, 250, false).WinMarkerPackage, 
+  new Level("Construction Chaos", 14, 20, new Point(-1200, -500), 0, 1.07)
+  .addObjects(new Array(...new WinArea(1400, 370, 0, 130, 250, false).WinMarkerPackage, 
   ...new ThinBuildingArray(1420, -1300, 7, 2).getThinBuildings(), ...new ThinBuildingArray(945, -60, 3, 10).getThinBuildings(), new Billboard(20, 260), new TrashCan(320, -30), new VisibleBarrier(-1130, -670, DIRECTION.FORWARD, 300), new Obstacle(1600, -420, 0 , 2750, 250), 
-  new Barrier(-510, 475, 0, 635, 900), new Obstacle(-20, 713, 0, 200, 700), new Obstacle(1006, 378, 0, 150, 430), new Obstacle(1406, 98, 0, 75, 750), new Obstacle(1405, 471, 0, 500, 80)
+  new Barrier(-510, 475, 0, 635, 900), new Obstacle(-20, 713, 0, 200, 700), new Obstacle(1006, 378, 0, 150, 430), new Obstacle(1406, 98, 0, 75, 750), new Obstacle(1405, 471, 0, 500, 80), new Obstacle(-1405, 744, 0, 153, 1457), new Obstacle(-152, 777, 0, 1250, 60)
+));
+
+  new Level("Rough Roads", 25, 20, new Point(-1133, 428), -90, 1.05)
+  .addObjects(new Array(new TrafficCone(1116, -401, 0), new TrafficCone(1153, -343, 0), new TrafficCone(1168, -496, 3), 
+  ...new ThinBuildingArray(574, -210, 3, 3).getThinBuildings(), ...new ThinBuildingArray(1740, -213, 2, 2).getThinBuildings(),
+  ...new ThinBuildingArray(-965, -658, 3, 3).getThinBuildings(), new VisibleBarrier(-1263, 565, DIRECTION.LEFT, 280), new Obstacle(-912, 506, 0, 124, 57, "You hit a hole!"),
+  new Obstacle(-774, -6, 0, 71, 40, "You hit a hole!"), new Obstacle(-379, -488, 0, 113, 47, "You hit a hole!"), new Obstacle(94, -359, 0, 74, 33, "You hit a hole!"),
+  new Obstacle(571, -494, 0, 113, 43, "You hit a hole!"), new Obstacle(787, -129, 0, 73, 31, "You hit a hole!"), new Obstacle(888, 225, 0, 75, 34, "You hit a hole!"), 
+  new Obstacle(1163, 664, 0, 179, 744), new Obstacle(-397, 661, 0, 161, 862), new Obstacle(-556, 681, 0, 786, 91), new Obstacle(-933, 232, 0, 413, 71),
+  new Obstacle(-932, 163, 0, 84, 816), new Obstacle(1395, -619, 0, 2363, 91), new Obstacle(1442, -200, 0, 306, 475, "You hit a hole!"),
+  new Obstacle(614, 659, 0, 75, 859), ...new WinArea(919, 626, 0, 233, 138, false).WinMarkerPackage
 ));
 
   car = new PlayerCar(
