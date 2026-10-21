@@ -292,6 +292,9 @@ class Level{
   }
 
   updateStars(){
+    if (this.stars.length === 0 || this.stars === null){
+      this.stars = [0, 0, 0];
+    }
     for(let i = 0; i < this.stars.length; i++){
       if (this.stars[i] === 1) {
         this.starsImage[i].src = "/images/Star Full.png";
@@ -3249,7 +3252,7 @@ function clearSavedData(){
   maxLvl = 5
   for (let level of levels){
     level.editStars(new Array(0,0,0));
-    level.updateStars
+    level.updateStars()
   }
   Level.updateLevelAvailability();
   workspace.clear();
