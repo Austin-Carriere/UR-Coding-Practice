@@ -56,7 +56,8 @@ if (performance.getEntriesByType("navigation")[0].type != "reload") {
   currentLvl = urlParams.get('level');
   if (currentLvl === null) currentLvl = 1;
 } else {
-  currentLvl = JSON.parse(localStorage.getItem("currentLvl")) ?? 1;
+  if (localStorage.getItem("currentLvl") === null) localStorage.setItem("currentLvl", 1);
+  currentLvl = JSON.parse(localStorage.getItem("currentLvl"));
 }
 currentLvl = Number(currentLvl);
 
@@ -214,7 +215,6 @@ class Level{
     this.carStartPoint = carStartPoint;
     this.carStartHeading = heading;
     this.maxSeconds = maxSeconds;
-    console.log("Construction:", this.stars);
   }
 
   editStars(array){
@@ -305,13 +305,13 @@ class Level{
   }
 
    activate(){
+    currentLvl = this.lvlNum;
     console.log("Activating level ", this.lvlNum);
     background = new Background(this.backgroundImage, this.backgroundScale);
     camera.setBorder(this.backgroundImage.width * this.backgroundScale, this.backgroundImage.height * this.backgroundScale);
     levelSeen = false;
     save();
     workspace.clear();
-    currentLvl = this.lvlNum;
     localStorage.setItem("currentLevel", this.lvlNum);
     load();
     canvasObjects = [];
@@ -1653,8 +1653,7 @@ let background = null;
 function loop(){
   updateOverlay();
   if (overlayActive || !panelActive) {
-    
-    save();
+    save(); 
     lastUpdateForTimer = performance.now();
    requestAnimationFrame(loop); //To Pause if Overlay is on
     return;
@@ -1685,14 +1684,13 @@ function loop(){
     if (debugMode){ 
       ctx.fillText(`${Math.round(1000/fpsTimer)} fps`, canvas.width/(3*camera.zoom), -canvas.height/(2.65 * camera.zoom) - textSize)
     }
+    console.log("Stored Current Level: ",JSON.parse(localStorage.getItem("currentLvl")), "Current Level: ", currentLvl);
     requestAnimationFrame(loop);
 
 }
 
 
 let car = null;
-
-
 
 async function startGame() {
   await preloadImages();
