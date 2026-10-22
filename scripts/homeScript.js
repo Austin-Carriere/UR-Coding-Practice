@@ -4,9 +4,11 @@ const title = document.querySelector(".titlePlayButton");
 let backgroundImages = [];
 let currentRow = null;
 let levels = [];
+let maxLvl = JSON.parse(localStorage.getItem("maxLvl"));
+if (maxLvl === null) maxLvl = 1;
 
 
-for (let i = 1; i <= 1; i++){
+for (let i = 1; i <= 3; i++){
   let newImage = new Image();
   newImage.src = `/images/Enviorment Assets/Backgrounds/Preview/${i}.png`;
   backgroundImages[i-1] = newImage;
@@ -90,6 +92,7 @@ class Level{
     const stars = module.querySelectorAll(".starContainer img");
     const description = module.querySelector(".description");
     title.textContent = this.title;
+    title.style.fontSize = this.title.length > 15 ? `${28 - (this.title.length * 0.15)}px` : "36px";
     lvlNum.textContent = this.lvlNum;
     description.textContent = this.description;
     preview.setAttribute("src", this.preview.src);
@@ -113,4 +116,6 @@ class Level{
 
 
 new Level("Driving Test", "Drive around town to get your license");
+new Level("Construction Chaos", "Navigate around the construction site safely");
+new Level("Rough Roads", "Drive carefully and avoid the holes!");
 

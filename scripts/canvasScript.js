@@ -305,13 +305,13 @@ class Level{
   }
 
    activate(){
-    currentLvl = this.lvlNum;
     console.log("Activating level ", this.lvlNum);
     background = new Background(this.backgroundImage, this.backgroundScale);
     camera.setBorder(this.backgroundImage.width * this.backgroundScale, this.backgroundImage.height * this.backgroundScale);
     levelSeen = false;
     save();
     workspace.clear();
+    currentLvl = this.lvlNum;
     localStorage.setItem("currentLevel", this.lvlNum);
     load();
     canvasObjects = [];
@@ -1652,8 +1652,8 @@ const camera = new Camera(10000, 10000);
 let background = null; 
 function loop(){
   updateOverlay();
-  if (overlayActive || !panelActive) {
-    save(); 
+  save();
+  if (overlayActive || !panelActive) { 
     lastUpdateForTimer = performance.now();
    requestAnimationFrame(loop); //To Pause if Overlay is on
     return;
