@@ -72,6 +72,7 @@ class Level{
   }
 
   updateStars(){
+    if (this.stars === undefined) this.stars = [0,0,0];
     for(let i = 0; i < this.stars.length; i++){
       if (this.stars[i] === 1) {
         this.starsImage[i].src = "/images/Star Full.png";

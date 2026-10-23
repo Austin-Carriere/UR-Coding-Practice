@@ -256,7 +256,7 @@ class Level{
      if (maxLvl === this.lvlNum) maxLvl += 1;
     Level.updateLevelAvailability();
     console.log(timer/1000, this.maxSeconds);
-    this.editStars([1,(numBlocks < this.maxBlocks) ? 1 : 0, (timer/1000 <= this.maxSeconds) ? 1 : 0]); //TODO: Still Need to add Timer and Star Trigger
+    this.editStars([1,(numBlocks < this.maxBlocks || this.stars[0] === 1) ? 1 : 0, (timer/1000 <= this.maxSeconds) || this.stars[1] === 1 ? 1 : 0]); //TODO: Still Need to add Timer and Star Trigger
     console.log(this.lvlNum, this.stars);
     WinScreen.stars.forEach((star, index) => {
       if (this.stars[index] === 1){
@@ -292,9 +292,7 @@ class Level{
   }
 
   updateStars(){
-    if (this.stars.length === 0 || this.stars === null){
-      this.stars = [0, 0, 0];
-    }
+    if (this.stars === undefined) this.stars = [0, 0, 0];
     for(let i = 0; i < this.stars.length; i++){
       if (this.stars[i] === 1) {
         this.starsImage[i].src = "/images/Star Full.png";
@@ -3156,6 +3154,16 @@ function numberShadow(value = 0) {
 let scriptRunning = false;
 let canRunScript = true; //This is to make sure you clicked reset before running the script again
 let scriptLoopID = null;
+
+function getStartBlock(){
+const topBlocks = workspace.getTopBlocks();
+
+  const startBlock = topBlocks.find(
+        block => block.type === "start_block"
+    );
+  return startBlock;
+}
+
 function runScript() {
   if (scriptRunning || !canRunScript) return;
   scriptRunning = true;
@@ -3163,12 +3171,8 @@ function runScript() {
   
   currentStateIndex = 0;
   states = [];
-  const topBlocks = workspace.getTopBlocks();
-
-  const startBlock = topBlocks.find(
-        block => block.type === "start_block"
-    );
-  const code = generator.blockToCode(startBlock);
+  
+  const code = generator.blockToCode(getStartBlock());
   console.log(code);
   eval(code);
   console.log(states);
@@ -3217,7 +3221,11 @@ pannelButton.addEventListener("click", () => {
 });
   
 workspace.addChangeListener(() => {
-    numBlocks = workspace.getAllBlocks().filter(block => !block.isShadow()).length;
+  try{
+    numBlocks = getStartBlock().getDescendants(true).filter(block => !block.isShadow()).length;
+  } catch(e) {
+    numBlocks = 0;
+  } 
     blockCounter.textContent = `Blocks: ${numBlocks}`;
 });
 
@@ -3247,7 +3255,6 @@ function load(){
 
 load();
 function clearSavedData(){
-  maxLvl = 5
   for (let level of levels){
     level.editStars(new Array(0,0,0));
     level.updateStars()
