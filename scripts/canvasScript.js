@@ -252,12 +252,9 @@ class Level{
   finished(){
     states.forEach((state) => {state.completed = true});
     console.log("Finished level ", this.lvlNum)
-    console.log(maxLvl === this.lvlNum, typeof maxLvl, this.lvlNum)
      if (maxLvl === this.lvlNum) maxLvl += 1;
     Level.updateLevelAvailability();
-    console.log(timer/1000, this.maxSeconds);
     this.editStars([1,(numBlocks < this.maxBlocks || this.stars[0] === 1) ? 1 : 0, (timer/1000 <= this.maxSeconds) || this.stars[1] === 1 ? 1 : 0]); //TODO: Still Need to add Timer and Star Trigger
-    console.log(this.lvlNum, this.stars);
     WinScreen.stars.forEach((star, index) => {
       if (this.stars[index] === 1){
         star.src = "/images/Star Full.png";
@@ -706,7 +703,6 @@ class RigidBody extends ConcreteObject {
     this.y += vector.y;
     } catch (error) {
       this.velocity = new Victor(0, 0);
-      console.log("Error in moveByVector: ", error);
     }
     
   }
@@ -1305,7 +1301,6 @@ class PlacementMarker extends FloatingObject{
     super.update();
     this.x = camera.x + (-canvasMouseX + canvas.width/2) / camera.zoom;
     this.y = camera.y + (-canvasMouseY + canvas.height/2) / camera.zoom;
-    console.log(`X: ${this.x}, Y: ${this.y}`);
 
     for (let pin of pins){
       this.drawBoxFromPin(pin);
@@ -1682,7 +1677,6 @@ function loop(){
     if (debugMode){ 
       ctx.fillText(`${Math.round(1000/fpsTimer)} fps`, canvas.width/(3*camera.zoom), -canvas.height/(2.65 * camera.zoom) - textSize)
     }
-    console.log("Stored Current Level: ",JSON.parse(localStorage.getItem("currentLvl")), "Current Level: ", currentLvl);
     requestAnimationFrame(loop);
 
 }
@@ -2113,10 +2107,9 @@ class RotateState extends State{
     if (this.completed) return;
     car.rotateToward(this.heading ,this.direction)
     if (this.direction === DIRECTION.LEFT) {
-      console.log("Heading Diff:", Math.abs((car.heading - (this.startHeading - this.heading))));
+
         if (Math.abs((car.heading - (this.startHeading - this.heading))) < 0.2) this.completed = true;
     } else {
-      console.log("Heading Diff:", Math.abs((car.heading - (this.startHeading + this.heading))));
         if (Math.abs((car.heading - (this.startHeading + this.heading))) < 0.2) this.completed = true;
     }
     this.ticks++;
@@ -3247,6 +3240,7 @@ function load(){
   workspace.clear();
      Blockly.serialization.workspaces.load(state, workspace);
   maxLvl = JSON.parse(localStorage.getItem("maxLevel"));
+  if (maxLvl === null) maxLvl = 1;
   Level.assignStars(JSON.parse(localStorage.getItem("stars")));
 
  
