@@ -459,11 +459,11 @@ class ConcreteObject extends CanvasObject {
   //need to make offset be consitent with rotation
 
 get hitboxX() {
-  return this.actualX + this.hitboxOffset.x;
+  return -this.x + this.hitboxOffset.x;
 }
 
 get hitboxY() {
-  return this.actualY + this.hitboxOffset.y;
+  return -this.y + this.hitboxOffset.y;
 }
 
   get center() {
@@ -517,21 +517,18 @@ get hitboxY() {
 
     return new Polygon(this.hitboxPoints);
 }
+drawHitbox() {
+  if (!debugMode) return; // only draw in debug mode
+  ctx.strokeStyle = this.fillColor;
+  ctx.lineWidth = 2;
 
- drawHitbox() {
-  if (!debugMode) return; //Only draw hitboxes if debugMode is true
-    ctx.strokeStyle = this.fillColor;
-    ctx.lineWidth = 2;
-
-    ctx.beginPath();
-    ctx.moveTo(this.hitboxPoints[0].x, this.hitboxPoints[0].y);
-
-    for (let i = 1; i < this.hitboxPoints.length; i++) {
-        ctx.lineTo(this.hitboxPoints[i].x, this.hitboxPoints[i].y);
-    }
-
-    ctx.closePath();
-    ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(this.hitboxPoints[0].x + camera.x, this.hitboxPoints[0].y + camera.y);
+  for (let i = 1; i < this.hitboxPoints.length; i++) {
+    ctx.lineTo(this.hitboxPoints[i].x + camera.x, this.hitboxPoints[i].y + camera.y);
+  }
+  ctx.closePath();
+  ctx.stroke();
 }
 
   isIntersecting(objs) {
@@ -1381,10 +1378,10 @@ constructor(x, y, heading = 0, width = 100, height = 100, needsInside = false){
     ctx.lineWidth = 5;
 
     ctx.beginPath();
-    ctx.moveTo(this.hitboxPoints[0].x, this.hitboxPoints[0].y);
+    ctx.moveTo(this.hitboxPoints[0].x + camera.x, this.hitboxPoints[0].y + camera.y);
 
     for (let i = 1; i < this.hitboxPoints.length; i++) {
-        ctx.lineTo(this.hitboxPoints[i].x, this.hitboxPoints[i].y);
+        ctx.lineTo(this.hitboxPoints[i].x + camera.x, this.hitboxPoints[i].y + camera.y);
     }
 
     ctx.closePath();
@@ -1449,9 +1446,10 @@ class PlayerCar extends RigidBody {
 
   update(){
     if (paused){
+      this.updatePolygonPos();
       this.draw();
       this.drawHitbox();
-      this.updatePolygonPos();
+      
        return;
     }
     super.update();
@@ -1710,15 +1708,17 @@ async function startGame() {
   new Obstacle(614, 659, 0, 75, 859), ...new WinArea(919, 626, 0, 233, 138, false).WinMarkerPackage
 ));
 
-  new Level("Parking Lot", 13, 15, new Point(805, -842), 0, 1.05)
-  .addObjects(new Array(...new ThinBuildingArray(1363, 486, 8, 2).getThinBuildings(), ...new ThinBuildingArray(1370, -889, 1, 0).getThinBuildings(), 
-  ...new ThinBuildingArray(609, -889, 1, 0).getThinBuildings(), ...new ThinBuildingArray(235, -1544, 5, 1).getThinBuildings(),
+  new Level("Parking Lot", 13, 15, new Point(804, -743), 0, 1.05)
+  .addObjects(new Array(...new ThinBuildingArray(1333, 486, 8, 2).getThinBuildings(), ...new ThinBuildingArray(1370, -889, 1, 0).getThinBuildings(), 
+  ...new ThinBuildingArray(609, -889, 1, 0).getThinBuildings(), ...new ThinBuildingArray(250, -1534, 5, 1).getThinBuildings(),
   new Obstacle(1045, 75, 0, 63, 958), new Obstacle(666, 70, 0, 82, 946), new Barrier(1326, 128, 0, 342, 50), new Barrier(674, 127, 0, 470, 45), new Obstacle(252, 127, 0, 59, 776),
   new Obstacle(205, 124, 0, 50, 97), new Barrier(-106, 147, 0, 812, 56), new Barrier(-943, 88, 45, -14, -57), new Barrier(-74, 146, -45, 14, 61),
   new Obstacle(-174, 61, 0, 85, 171, "You hit a car!"), new Obstacle(-320, 43, 0, 94, 154, "You hit a car!"), new Obstacle(-472, 41, 0, 88, 153, "You hit a car!"),
   new Obstacle(52, -402, 0, 72, 153, "You hit a police car!"), new Obstacle(-106, -408, 0, 72, 145, "You hit a car!"), new Obstacle(-235, -419, 0, 75, 141, "You hit a car!"),
   new Obstacle(-514, -398, 0, 77, 157, "You hit a car!"), ...new WinArea(-345, -374, 0, 125, 210, true).WinMarkerPackage, new Obstacle(249, -605, 0, 1590, 136),
-  new VisibleBarrier(1305, 415, DIRECTION.RIGHT, 300), new VisibleBarrier(985, -965, DIRECTION.FORWARD, 290)
+  new VisibleBarrier(1305, 415, DIRECTION.RIGHT, 300), new VisibleBarrier(987, -888, DIRECTION.FORWARD, 290), new Barrier(396, 478, 0, 39, 68), 
+  new Obstacle(-1233, 144, 0, 93, 787), new VisibleBarrier(-1219, 411, DIRECTION.LEFT, 280), new Obstacle(1310, 495, 0, 59, 76), new Obstacle(-1251, 499, 0, 47, 92)
+  , 
 ));
 
   car = new PlayerCar(
@@ -2039,7 +2039,7 @@ class State{
   updateElapsedTime(){
     if (this.lastUpdate === 0) this.lastUpdate = performance.now();
     const now = performance.now();
-    if (paused){
+    if (paused || overlayActive){
       this.lastUpdate = now;
       return;
     }
