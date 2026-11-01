@@ -11,7 +11,7 @@ let levels = [];
 let maxLvl = 1;
 let currentLvl = 1;
 
-const numOfLevels = 3;
+const numOfLevels = 4;
 
 let numBlocks = 0;
 let timer = 0;
@@ -1710,13 +1710,24 @@ async function startGame() {
   new Obstacle(614, 659, 0, 75, 859), ...new WinArea(919, 626, 0, 233, 138, false).WinMarkerPackage
 ));
 
+  new Level("Parking Lot", 13, 15, new Point(805, -842), 0, 1.05)
+  .addObjects(new Array(...new ThinBuildingArray(1363, 486, 8, 2).getThinBuildings(), ...new ThinBuildingArray(1370, -889, 1, 0).getThinBuildings(), 
+  ...new ThinBuildingArray(609, -889, 1, 0).getThinBuildings(), ...new ThinBuildingArray(235, -1544, 5, 1).getThinBuildings(),
+  new Obstacle(1045, 75, 0, 63, 958), new Obstacle(666, 70, 0, 82, 946), new Barrier(1326, 128, 0, 342, 50), new Barrier(674, 127, 0, 470, 45), new Obstacle(252, 127, 0, 59, 776),
+  new Obstacle(205, 124, 0, 50, 97), new Barrier(-106, 147, 0, 812, 56), new Barrier(-943, 88, 45, -14, -57), new Barrier(-74, 146, -45, 14, 61),
+  new Obstacle(-174, 61, 0, 85, 171, "You hit a car!"), new Obstacle(-320, 43, 0, 94, 154, "You hit a car!"), new Obstacle(-472, 41, 0, 88, 153, "You hit a car!"),
+  new Obstacle(52, -402, 0, 72, 153, "You hit a police car!"), new Obstacle(-106, -408, 0, 72, 145, "You hit a car!"), new Obstacle(-235, -419, 0, 75, 141, "You hit a car!"),
+  new Obstacle(-514, -398, 0, 77, 157, "You hit a car!"), ...new WinArea(-345, -374, 0, 125, 210, true).WinMarkerPackage, new Obstacle(249, -605, 0, 1590, 136),
+  new VisibleBarrier(1305, 415, DIRECTION.RIGHT, 300), new VisibleBarrier(985, -965, DIRECTION.FORWARD, 290)
+));
+
   car = new PlayerCar(
     500,
     40,
     images[`/images/Cars/${colorArray[0][0]}_Car1.png`],
     90
   );
-  levels[currentLvl-1].activate();
+  levels[3].activate();
   lastUpdateForTimer = performance.now();
   load();
   loop();
