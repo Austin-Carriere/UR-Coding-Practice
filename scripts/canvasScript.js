@@ -1727,7 +1727,7 @@ async function startGame() {
     images[`/images/Cars/${colorArray[0][0]}_Car1.png`],
     90
   );
-  levels[3].activate();
+  levels[currentLvl-1].activate();
   lastUpdateForTimer = performance.now();
   load();
   loop();
