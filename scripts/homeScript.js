@@ -8,7 +8,7 @@ let maxLvl = JSON.parse(localStorage.getItem("maxLvl"));
 if (maxLvl === null) maxLvl = 1;
 
 
-for (let i = 1; i <= 3; i++){
+for (let i = 1; i <= 4; i++){
   let newImage = new Image();
   newImage.src = `/images/Enviorment Assets/Backgrounds/Preview/${i}.png`;
   backgroundImages[i-1] = newImage;
@@ -110,7 +110,7 @@ class Level{
     });
     this.updateStars();
     currentRow.append(module);
-    if (this.lvlNum % 4 === 0) new row(); //Make a new row
+    if (this.lvlNum % 3 === 0) new row(); //Make a new row
     return module;
   }  
 }
@@ -119,4 +119,4 @@ class Level{
 new Level("Driving Test", "Drive around town to get your license");
 new Level("Construction Chaos", "Navigate around the construction site safely");
 new Level("Rough Roads", "Drive carefully and avoid the holes!");
-
+new Level("Parking Lot", "Navigate the parking lot without hitting any cars");
