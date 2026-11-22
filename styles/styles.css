@@ -199,6 +199,21 @@ body{
   transition: all 600ms ease-in;
 }
 
+.tutorialButtonTaskbar{
+   height: 100%;
+  margin-right: 15px;
+  background: none;
+  border: none;
+}
+
+.tutorialButtonTaskbar img{
+  transition: all 200ms ease-in;
+}
+
+.tutorialButtonTaskbar img:hover{
+  transform: scale(1.1);
+}
+
 .reset{
   color: rgb(239, 50, 50);
 }
@@ -248,7 +263,7 @@ html {
 }
 body {
   margin: 0px;
-  overflow: hidden
+  overflow: hidden;
 }
 .urban-rescue-logo:hover {
   transform: translate(0, -2px);
@@ -885,3 +900,67 @@ border: #181a2a 5px solid;
   transform: scale(0.96);
 }
 
+.tutorialModule{
+  width: 400px;
+  background-image: linear-gradient(100deg, #1b2639, #3f4c66, #1b2639);
+  border: 5px solid #e6af2e;
+  font-size: 35px;
+  font-family: "Jersey 10";
+  color: white;
+  border-radius: 20px;
+  background-repeat:repeat;
+  animation: backgroundTutorialAnim 7s linear infinite;
+  background-size: 200% 100%;
+  position: absolute;
+  z-index: 100000000;
+}
+
+@keyframes backgroundTutorialAnim{
+  0%{
+    background-position: 0% 0%;
+  } 
+  100%{
+    background-position: 200% 0%;
+  }
+}
+
+.tutorialText{
+  color: white;
+  font-size: 23px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Jersey 10";
+  margin: 4px auto;
+  height: 70%;
+  width: 95%;
+}
+
+.tutorialButtonContainer{
+  display: flex;
+  justify-content: center;
+  margin: 10px 0;
+  height: 30%;
+  width: 100%;
+}
+
+.tutorialButton{
+  background-image: linear-gradient(315deg, #1b2639, #25344f);
+  border: 5px solid #e6af2e;
+  font-size: 20px;
+  font-family: "Jersey 10";
+  height: 40px;
+  color: white;
+  border-radius: 10px;
+  transition: all 300ms ease-in;
+}
+
+.tutorialButton:hover{
+  transform: scale(1.03);
+  background:rgb(51, 62, 88);
+}
+
+.tutorialButton:active{
+  transition: transform 50ms linear;
+  transform: scale(0.95);
+}

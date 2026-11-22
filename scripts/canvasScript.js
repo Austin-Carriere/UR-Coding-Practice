@@ -354,7 +354,6 @@ class Level{
   
 }
 
-
 let overlayActive = false
 
 class CanvasObject {
@@ -1644,6 +1643,7 @@ let background = null;
 function loop(){
   updateOverlay();
   save();
+  tutorials.forEach((tutorial) => tutorial.updatePosition());
   if (overlayActive || !panelActive) { 
     lastUpdateForTimer = performance.now();
    requestAnimationFrame(loop); //To Pause if Overlay is on
@@ -2011,6 +2011,10 @@ window.addEventListener("keydown", (event) => {
   if (event.key === "c" && debugMode && contains(canvasObjects, PlacementMarker)) {
     await navigator.clipboard.writeText(canvasObjects.find(obj => obj instanceof PlacementMarker).getCoordsString());
   }
+});
+
+document.querySelector(".tutorialButtonTaskbar").addEventListener("click", () => {
+  tutorials[0].activate();
 });
 
 
@@ -3211,8 +3215,10 @@ const pannelButton = document.getElementById("panelButton");
 const panelArrow = document.getElementById("panelArrow");
 let panelActive = false;
 
-pannelButton.addEventListener("click", () => {
-  if (panelActive) {
+    pannelButton.addEventListener("click", togglePanel);
+
+function togglePanel(){
+   if (panelActive) {
     panelContainer.classList.remove("active");
     panelArrow.classList.remove("active");
     panelActive = false;
@@ -3222,7 +3228,15 @@ pannelButton.addEventListener("click", () => {
 
     panelActive = true;
   }
-});
+}
+
+function openPanel(){
+  if (!panelActive) togglePanel();
+}
+
+function closePanel(){
+  if (panelActive) togglePanel();
+}
   
 workspace.addChangeListener(() => {
   try{
@@ -3318,3 +3332,86 @@ for (let option of showArrowSetting.options){
     }
   });
 }
+
+let tutorials = [];
+class Tutorial{
+  constructor(element, text, topOffset = 0, leftOffset = 0, onOpen = () => {return;}){
+    this.targetElement = element;
+    this.text = text;
+    this.topOffset = topOffset;
+    this.leftOffset = leftOffset;
+    this.onOpen = onOpen;
+    this.element = this.createElement();
+    tutorials.push(this);
+  }
+
+  updatePosition(){
+    this.element.style.left = `${this.targetElement.getBoundingClientRect().left + this.leftOffset}px`;
+    this.element.style.top = `${this.targetElement.getBoundingClientRect().top + this.topOffset}px`;
+  }
+
+  next(){
+    const index = tutorials.indexOf(this);
+    if (index > -1 && index < tutorials.length - 1) {
+      tutorials[index + 1].activate();
+    }
+  }
+
+  activate(){
+    if (this.onOpen) this.onOpen();
+    tutorials.forEach(tutorial => tutorial.element.style.display = "none");
+    this.element.style.display = "block";
+    if (tutorials.indexOf(this) === 0) {
+      this.backButton.style.display = "none";
+    } else {
+      this.backButton.style.display = "block";
+    }
+    if (tutorials.indexOf(this) === tutorials.length - 1) {
+      this.nextButton.style.display = "none";
+      this.closeButton.style.display = "block";
+    } else {
+      this.nextButton.style.display = "block";
+      this.closeButton.style.display = "none";
+    }
+
+  }
+
+  back(){
+    const index = tutorials.indexOf(this);
+    if (index > 0) {
+      tutorials[index - 1].activate();
+    }
+  }
+
+  close(){
+    this.element.style.display = "none";
+  }
+
+  createElement(){
+    const tutorialModule = document.querySelector(".tutorialModuleTemplate");
+    const module = tutorialModule.content.cloneNode(true).querySelector(".tutorialModule");
+    module.querySelector(".tutorialText").textContent = this.text;
+    this.backButton = module.querySelector(".tutorialBackButton");
+    this.nextButton = module.querySelector(".tutorialNextButton");
+    this.closeButton = module.querySelector(".tutorialCloseButton");
+    
+    document.querySelector("body").appendChild(module);
+    this.leftOffset -= module.getBoundingClientRect().width;
+    module.style.left = `${this.targetElement.getBoundingClientRect().left + this.leftOffset}px`;
+    module.style.top = `${this.targetElement.getBoundingClientRect().top + this.topOffset}px`;
+    module.style.display = "none";
+    this.backButton.addEventListener("click", () => this.back());
+    this.nextButton.addEventListener("click", () => this.next());
+    this.closeButton.addEventListener("click", () => this.close());
+    return module;
+  }
+}
+
+new Tutorial(document.querySelector(".settingsButton"), "This is the settings button. This will bring up the settings menu.", 0, 0);
+new Tutorial(document.querySelector(".panelButton"), "This is the panel button. Click it to bring out the panel.", 0, 0);
+new Tutorial(document.querySelector("#carChangerButton"), "This is the car changer button. Here you can change how your car looks!", -70, 0, () => openPanel());
+new Tutorial(document.querySelector("#levelSelectorButton"), "This is the level selector button. Select the level you want to play here.", -70, 0, () => openPanel());
+new Tutorial(document.querySelector("#lockView"), "The lock view button keeps the camera centered on your car so you never miss the action. It will stop locking if you move your camera. Try it now!", -140, 0, () => startGame());
+new Tutorial(document.querySelector("#playButton"), "This is the play button. Here you can watch your code come to life. After you click it a pause button will appear which allows you to stop whenever you want!", -140, 0, ()=> openPanel());
+new Tutorial(document.querySelector("#restartButton"), "In order to run your code again you must hit this restart button", -70, 0, () => {openPanel()});
+new Tutorial(document.querySelector(".blocklyToolbox"), "This is the toolbox. You will find all the blocks you can use by clicking on any of the categories. Try it!", 100, document.querySelector(".blocklyToolbox").getBoundingClientRect().width + 420);
