@@ -19,6 +19,7 @@ let fpsTimer = 0;
 let fpsLastUpdate = performance.now();
 let lastUpdateForTimer = performance.now();
 let showWinAreaArrow = true;
+let tutorialActive = false;
 const canvas = document.querySelector(".canvasPopup");
 const panel = document.querySelector(".panel")
 const ctx = canvas.getContext("2d");
@@ -2013,8 +2014,16 @@ window.addEventListener("keydown", (event) => {
   }
 });
 
+const tutorialButtonImage = document.querySelector(".tutorialButtonTaskbar img");
 document.querySelector(".tutorialButtonTaskbar").addEventListener("click", () => {
-  tutorials[0].activate();
+  if (tutorialActive) {
+    Tutorial.deactivate();
+    tutorialButtonImage.src = "/images/Tutorial Icon.png";
+  } else {
+    tutorialButtonImage.src = "/images/Tutorial Active Icon.png";
+    tutorials[0].activate();
+  }
+  
 });
 
 
@@ -3345,6 +3354,11 @@ class Tutorial{
     tutorials.push(this);
   }
 
+  static deactivate(){
+    tutorials.forEach(tutorial => tutorial.element.style.display = "none");
+    tutorialActive = false;
+  }
+
   updatePosition(){
     this.element.style.left = `${this.targetElement.getBoundingClientRect().left + this.leftOffset}px`;
     this.element.style.top = `${this.targetElement.getBoundingClientRect().top + this.topOffset}px`;
@@ -3358,6 +3372,7 @@ class Tutorial{
   }
 
   activate(){
+    tutorialActive = true;
     if (this.onOpen) this.onOpen();
     tutorials.forEach(tutorial => tutorial.element.style.display = "none");
     this.element.style.display = "block";
