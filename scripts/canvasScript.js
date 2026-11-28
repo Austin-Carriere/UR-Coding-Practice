@@ -3525,7 +3525,31 @@ function restartAnimation(el, animation) {
     alert("Could not connect to the server.");
 }
 } else{
+    try {
+    const response = await fetch("/api/login", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            username: loginPortal.UsernameTextBox.value.trim(),
+            password: loginPortal.PasswordTextBox.value
+        })
+    });
 
+    const data = await response.json();
+
+    if (!data.success) {
+        alert(data.error);
+        return;
+    }
+
+    console.log("Login successful!");
+
+} catch (error) {
+    console.error("Login error:", error);
+    alert("Could not connect to the server.");
+}
 }
   
 });
