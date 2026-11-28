@@ -11,6 +11,9 @@ let levels = [];
 let maxLvl = 1;
 let currentLvl = 1;
 
+let username = "";
+let password = "";
+
 const numOfLevels = 4;
 
 let numBlocks = 0;
@@ -3430,3 +3433,101 @@ new Tutorial(document.querySelector("#lockView"), "The lock view button keeps th
 new Tutorial(document.querySelector("#playButton"), "This is the play button. Here you can watch your code come to life. After you click it a pause button will appear which allows you to stop whenever you want!", -140, 0, ()=> openPanel());
 new Tutorial(document.querySelector("#restartButton"), "In order to run your code again you must hit this restart button", -70, 0, () => {openPanel()});
 new Tutorial(document.querySelector(".blocklyToolbox"), "This is the toolbox. You will find all the blocks you can use by clicking on any of the categories. Try it!", 100, document.querySelector(".blocklyToolbox").getBoundingClientRect().width + 420);
+
+
+//Login Portal Stuff
+
+
+
+const loginPortal = {
+  element: document.querySelector(".LoginPortal"),
+  title: document.querySelector(".LoginPortalTitle"),
+  UsernameTextBox: document.querySelector("#Username"),
+  PasswordTextBox: document.querySelector("#Password"),
+  buttonContainer: document.querySelector(".LoginPortalButtonContainer"),
+  loginButton: document.querySelector("#LoginPortalLoginButton"),
+  confirmButton: document.querySelector("#LoginPortalConfirm"),
+  settingsLoginButton: document.querySelector(".LoginButton"),
+}
+let loginPortalActive = false;
+window.addEventListener("click", (e)=>{
+  const clickedInside = loginPortal.element.contains(e.target);
+  const clickedToggle = loginPortal.settingsLoginButton.contains(e.target);
+  const settingsButtonClicked = settingButton.contains(e.target);
+
+  if (!clickedInside && !clickedToggle && !settingsButtonClicked){
+    loginPortal.element.style.display = "none";
+    loginPortalActive = false;
+  }
+});
+
+loginPortal.settingsLoginButton.addEventListener("click", ()=>{
+    loginPortal.element.style.display = "";
+    loginPortalActive = true;
+});
+
+loginPortal.loginButton.addEventListener("click", ()=>{
+  loginPortal.element.classList.toggle("LoginMode");
+  loginPortal.UsernameTextBox.classList.toggle("LoginMode");
+  loginPortal.PasswordTextBox.classList.toggle("LoginMode");
+  loginPortal.confirmButton.classList.toggle("LoginMode");
+  loginPortal.loginButton.classList.toggle("LoginMode");  
+  loginPortal.UsernameTextBox.value = "";
+  loginPortal.PasswordTextBox.value = "";
+  loginPortal.title.textContent = loginPortal.element.classList.contains("LoginMode") ? "Login" : "Sign Up";
+  loginPortal.loginButton.textContent = loginPortal.element.classList.contains("LoginMode") ? "Sign Up" : "Login";
+});
+
+function restartAnimation(el, animation) {
+  el.style.animation = "none";
+  void el.offsetWidth; // forces reflow so the "none" actually takes effect
+  el.style.animation = animation;
+}
+
+ loginPortal.confirmButton.addEventListener("click", async()=>{
+  if (!loginPortal.element.classList.contains("LoginMode")) {
+    const validUsername = loginPortal.UsernameTextBox.value.length >= 3;
+    const validPassword = loginPortal.PasswordTextBox.value.length >= 3;
+
+    if (!validUsername || !validPassword){
+     (!validUsername ? restartAnimation(loginPortal.UsernameTextBox, "fail 0.2s ease-in-out") : restartAnimation(loginPortal.UsernameTextBox, "success 0.2s ease-in-out"));
+     (!validPassword ? restartAnimation(loginPortal.PasswordTextBox, "fail 0.2s ease-in-out") : restartAnimation(loginPortal.PasswordTextBox, "success 0.2s ease-in-out"));
+      return;
+    }
+
+    username = loginPortal.UsernameTextBox.value;
+    password = loginPortal.PasswordTextBox.value;
+    restartAnimation(loginPortal.UsernameTextBox, "success 0.2s ease-in-out");
+    restartAnimation(loginPortal.PasswordTextBox, "success 0.2s ease-in-out");
+    try {
+    const response = await fetch("/api/register", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            username: username,
+            password: password
+        })
+    });
+
+    const data = await response.json();
+
+    if (!data.success) {
+        alert(data.error);
+        return;
+    }
+
+    console.log("Account created successfully!");
+
+} catch (error) {
+    console.error("Registration error:", error);
+    alert("Could not connect to the server.");
+}
+} else{
+
+}
+  
+});
+
+
