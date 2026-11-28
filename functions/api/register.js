@@ -13,7 +13,7 @@ async function hashPassword(password, salt) {
         {
             name: "PBKDF2",
             salt: encoder.encode(salt),
-            iterations: 600000,
+            iterations: 100000,
             hash: "SHA-256"
         },
         key,
@@ -79,12 +79,12 @@ export async function onRequestPost({ request, env }) {
 
        console.error("Registration error:", error);
 
-return Response.json(
+        return Response.json(
     {
         success: false,
         error: error.message || "Unknown error"
     },
     { status: 500 }
-);
+        );
     }
 }
