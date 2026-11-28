@@ -1,3 +1,5 @@
+import { createSession } from "./_session.js";
+
 async function hashPassword(password, salt) {
     const encoder = new TextEncoder();
 
@@ -64,10 +66,17 @@ export async function onRequestPost({ request, env }) {
             );
         }
 
-        return Response.json({
-            success: true,
-            playerID: player.player_id
-        });
+       const token = await createSession(player.player_id,env.SESSION_SECRET);
+
+            return Response.json(
+                { success: true },
+                    {
+                         headers: {
+                      "Set-Cookie": `session=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800`,
+                     "Cache-Control": "no-store"
+                        }
+            }
+    );
 
     } catch (error) {
         return Response.json(

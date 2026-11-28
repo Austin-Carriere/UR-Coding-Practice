@@ -3544,7 +3544,15 @@ function restartAnimation(el, animation) {
         return;
     }
 
-    console.log("Login successful!");
+    const sessionResponse = await fetch("/api/session");
+    const sessionData = await sessionResponse.json();
+
+    if (!sessionData.loggedIn) {
+      alert("Login session could not be created.");
+      return;
+    }
+
+console.log("Login successful! Player ID:", sessionData.playerID);
 
 } catch (error) {
     console.error("Login error:", error);
