@@ -77,9 +77,14 @@ export async function onRequestPost({ request, env }) {
             );
         }
 
-        return Response.json(
-            { success: false, error: "Registration failed." },
-            { status: 500 }
-        );
+       console.error("Registration error:", error);
+
+return Response.json(
+    {
+        success: false,
+        error: error.message || "Unknown error"
+    },
+    { status: 500 }
+);
     }
 }
